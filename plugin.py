@@ -1,6 +1,6 @@
-# Basic Python Plugin Example
+# OpenTherm Weather Dependent Heating Control
 #
-# Author: GizMoCuz
+# Author: akamming
 #
 """
 <plugin key="OpenTherm" name="Weather Dependent Heating Control" author="akamming" version="1.0.0" wikilink="http://www.domoticz.com/wiki/plugins/plugin.html" externallink="https://github.com/akamming/esp_domoticz_opentherm_handler/">

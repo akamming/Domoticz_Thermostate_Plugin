@@ -4,7 +4,7 @@ Domoticz Plugin for ESP thermostat with weather dependent heating control
 ## Features
 1. Manual control of several boiler features
 2. Readout of several boiler sensors as devices in domoticz
-3. But mostly: an implementation of a weather dependent heating control thermostat with reference room compensation. 
+3. But mostly: an implementation of a weather dependent heating control thermostat with reference room compensation using any temperature device in domoticz. 
 
 Weather Dependant Heating Control basically means that the boiler temperature is derived from the outside temperature and very advisable in much automated homes (e.g.  every room has it's own thermostat, so there is no central thermostat to manage best boiler setting) or if you have a fireplace. I will not desribe here what it is and how to use it, this is much better explained on lots of places on the internet like http://tech-controllers.com/blog/heating-curve---what-is-it-and-how-to-set-it
 

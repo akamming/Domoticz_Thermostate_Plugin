@@ -194,7 +194,7 @@ def CreateProgramSwitch():
                    "LevelNames": "Off|Frost Proctection|Night|Day",
                    "LevelOffHidden": "false",
                    "SelectorStyle": "1"}
-        Domoticz.Device(Name="Program", Unit=PROGRAMSWITCH, TypeName="Selector Switch", Options=Optionsi, Used=1).Create()
+        Domoticz.Device(Name="Program", Unit=PROGRAMSWITCH, TypeName="Selector Switch", Options=Options, Used=1).Create()
 
 def CreateParameters():
     CreateSetPoint("Boiler Temp at +20",BOILERTEMPATPLUS20,20)

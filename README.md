@@ -6,7 +6,7 @@ Domoticz Plugin for ESP thermostat with weather dependent heating control
 2. Readout of several boiler sensors as devices in domoticz
 3. But mostly: an implementation of a weather dependent heating control thermostat with reference room compensation. 
 
-Weather Dependant Heating Control is very advisable in much automated homes (e.g.  every room has it's own thermostat) or if you have a fireplace. I will not desribe here what it is and how to use it, this is much better explained on lots of places on the internet like http://tech-controllers.com/blog/heating-curve---what-is-it-and-how-to-set-it
+Weather Dependant Heating Control basically means that the boiler temperature is derived from the outside temperature and very advisable in much automated homes (e.g.  every room has it's own thermostat, so there is no central thermostat to manage best boiler setting) or if you have a fireplace. I will not desribe here what it is and how to use it, this is much better explained on lots of places on the internet like http://tech-controllers.com/blog/heating-curve---what-is-it-and-how-to-set-it
 
 ## Prerequisites
 1. A wemos D1 with domototicz opentherm handler firmware (https://github.com/akamming/esp_domoticz_opentherm_handler)
@@ -39,6 +39,14 @@ Weather Dependant Heating Control is very advisable in much automated homes (e.g
  11. Click "add"
  12. You are now ready to use the plugin!
 
-## what do the sensors do?
-1. 1st of all your need to configure your heating curve, by setting the setpoints "Boiler Temp at +20", "Boilertemp at -10" and the Curvator selector switch. If you want to know what your curve looks like, taak a look at this example:
+## How to use the plugin
+1. 1st of all your need to configure your heating curve, by setting the setpoints "Boiler Temp at +20", "Boilertemp at -10" and the "Curvator" selector switch. If you want to know what your curve looks like, taak a look at this example:
+![image](https://user-images.githubusercontent.com/30364409/118477419-f010f380-b70e-11eb-9796-9752f7067d76.png)
+- Here temperature at +20 is set to 20
+- Temperature at -10 is set to 70
+- and you can see the effect of the curvature setting.
+Basically it states what the boiler temperature setting (y axies) should be for every outside temperature (x axis) 
 
+2. Then there are additional setpoints you can configure
+  - "Day Setpoint" and "Temperature compensation": setting the parameters will make sure that if reference room temeperature is below the "day setpoint", the boiler temperature is raised with the difference in temperature, multiplied by the "Temperature compensation" setting. E.g. when you want it bo be 20 Celcius, but actual temp is 18 celcius en temperature compensation is set to 5 degrees Celcius, the boiler temperature will be raised with 10 degreees celcius
+  -   

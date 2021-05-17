@@ -71,7 +71,7 @@ REFERENCEROOMCOMPENSATION=25
 Hostname=""
 OutsideTemperatureIdx=0
 InsideTemperatureIdx=0
-Debug=True;
+Debugging=False
 
 def getInt(s):
     try: 
@@ -82,7 +82,7 @@ def getInt(s):
 
 def Debug(text):
     global Debug
-    if (Debug):
+    if (Debugging):
         Domoticz.Log("DEBUG: "+text)
 
 def Log(text):
@@ -92,7 +92,7 @@ def UpdateCustomSensor(SensorName,UnitID,Value):
        #Creating devices in case they aren't there...
         if not (UnitID in Devices):
             Debug("Creating device "+SensorName)
-            Domoticz.Device(Name=SensorName, Unit=UnitID, TypeName="Custom").Create()
+            Domoticz.Device(Name=SensorName, Unit=UnitID, TypeName="Custom", Used=1).Create()
         Devices[UnitID].Update(nValue=0, sValue=str(Value))
         Domoticz.Log("Counter ("+Devices[UnitID].Name+")")
 
@@ -100,7 +100,7 @@ def UpdatePercentageSensor(SensorName,UnitID,Value):
        #Creating devices in case they aren't there...
         if not (UnitID in Devices):
             Debug("Creating device "+SensorName)
-            Domoticz.Device(Name=SensorName, Unit=UnitID, TypeName="Percentage").Create()
+            Domoticz.Device(Name=SensorName, Unit=UnitID, TypeName="Percentage", Used=1).Create()
         Devices[UnitID].Update(nValue=int(Value), sValue=str(Value))
         Domoticz.Log("Percentage ("+Devices[UnitID].Name+")")
 
@@ -108,7 +108,7 @@ def UpdateOnOffSensor(SensorName,UnitID,Value):
        #Creating devices in case they aren't there...
         if not (UnitID in Devices):
             Debug("Creating device "+SensorName)
-            Domoticz.Device(Name=SensorName, Unit=UnitID, TypeName="Switch").Create()
+            Domoticz.Device(Name=SensorName, Unit=UnitID, TypeName="Switch", Used=1).Create()
         newValue=0
         if (Value.lower()=="on"):
             newValue=1
@@ -120,7 +120,7 @@ def UpdateSetpoint(SensorName,UnitID,Value):
        #Creating devices in case they aren't there...
         if not (UnitID in Devices):
             Debug("Creating device "+SensorName)
-            Domoticz.Device(Name=SensorName, Unit=UnitID, Type=242, Subtype=1).Create()
+            Domoticz.Device(Name=SensorName, Unit=UnitID, Type=242, Subtype=1, Used=1).Create()
         if int(Value)!=Devices[UnitID].nValue:
             Devices[UnitID].Update(nValue=int(Value), sValue=str(Value))
             Domoticz.Log("Setpoint ("+Devices[UnitID].Name+")")
@@ -129,7 +129,7 @@ def UpdateTemperatureSensor(SensorName,UnitID,Value):
        #Creating devices in case they aren't there...
         if not (UnitID in Devices):
             Debug("Creating device "+SensorName)
-            Domoticz.Device(Name=SensorName, Unit=UnitID, TypeName="Temperature").Create()
+            Domoticz.Device(Name=SensorName, Unit=UnitID, TypeName="Temperature", Used=1).Create()
         Devices[UnitID].Update(nValue=int(Value), sValue=str(Value))
         Domoticz.Log("Temperature ("+Devices[UnitID].Name+")")
 
@@ -137,36 +137,42 @@ def UpdatePressureSensor(SensorName,UnitID,Value):
        #Creating devices in case they aren't there...
         if not (UnitID in Devices):
             Debug("Creating device "+SensorName)
-            Domoticz.Device(Name=SensorName, Unit=UnitID, TypeName="Pressure").Create()
+            Domoticz.Device(Name=SensorName, Unit=UnitID, TypeName="Pressure", Used=1).Create()
         Devices[UnitID].Update(nValue=int(Value), sValue=str(Value))
         Domoticz.Log("Pressure ("+Devices[UnitID].Name+")")
 
 def UpdateSensors(data):
+    #Update steering vars
     UpdateOnOffSensor("EnableCentralHeating",ENABLECENTRALHEATING,data["EnableCentralHeating"])
     UpdateOnOffSensor("EnableHotWater",ENABLEHOTWATER,data["EnableHotWater"])
     UpdateOnOffSensor("EnableCooling",ENABLECOOLING,data["EnableCooling"])
     UpdateSetpoint("BoilerSetpoint",BOILERSETPOINT,data["BoilerSetpoint"])
     UpdateSetpoint("DHWSetpoint",DHWSETPOINT,data["DHWSetpoint"])
-    UpdateOnOffSensor("CentralHeating",CENTRALHEATING,data["CentralHeating"])
-    UpdateOnOffSensor("HotWater",HOTWATER,data["HotWater"])
-    UpdateOnOffSensor("Cooling",COOLING,data["Cooling"])
-    UpdateOnOffSensor("Flame",FLAME,data["Flame"])
-    UpdateTemperatureSensor("BoilerTemperature",BOILERTEMPERATURE,data["BoilerTemperature"])
-    UpdateTemperatureSensor("DHWTemperature",DHWTEMPERATURE,data["DhwTemperature"])
-    UpdateTemperatureSensor("ReturnTemperature",RETURNTEMPERATURE,data["ReturnTemperature"])
-    UpdatePressureSensor("Pressure",PRESSURE,data["Pressure"]) 
-    UpdatePercentageSensor("Modulation",MODULATION,data["Modulation"])
+
+    #Update Sensors
+    if data["OpenThermStatus"]=="OK":
+        UpdateOnOffSensor("CentralHeating",CENTRALHEATING,data["CentralHeating"])
+        UpdateOnOffSensor("HotWater",HOTWATER,data["HotWater"])
+        UpdateOnOffSensor("Cooling",COOLING,data["Cooling"])
+        UpdateOnOffSensor("Flame",FLAME,data["Flame"])
+        UpdateTemperatureSensor("BoilerTemperature",BOILERTEMPERATURE,data["BoilerTemperature"])
+        UpdateTemperatureSensor("DHWTemperature",DHWTEMPERATURE,data["DhwTemperature"])
+        UpdateTemperatureSensor("ReturnTemperature",RETURNTEMPERATURE,data["ReturnTemperature"])
+        UpdatePressureSensor("Pressure",PRESSURE,data["Pressure"]) 
+        UpdatePercentageSensor("Modulation",MODULATION,data["Modulation"])
+    else:
+        Log("Communication Error between ESP and Boiler: "+data["OpenThermStatus"])
 
 def CreateSetPoint(SensorName,UnitID,DefaultValue):
     if not (UnitID in Devices):
         Debug("Creating setpoint "+SensorName)
-        Domoticz.Device(Name=SensorName, Unit=UnitID, Type=242, Subtype=1).Create()
+        Domoticz.Device(Name=SensorName, Unit=UnitID, Type=242, Subtype=1, Used=1).Create()
         Devices[UnitID].Update(nValue=int(DefaultValue), sValue=str(DefaultValue))
 
 def CreateOnOffDevice(SensorName,UnitID,DefaultValue):
     if not (UnitID in Devices):
         Debug("Creating on/off device "+SensorName)
-        Domoticz.Device(Name=SensorName, Unit=UnitID, TypeName="Switch").Create()
+        Domoticz.Device(Name=SensorName, Unit=UnitID, TypeName="Switch", Used=1).Create()
         nv=0
         if DefaultValue.lower()=="on":
             nv=1
@@ -179,7 +185,7 @@ def CreateCurvatureSwitch():
                    "LevelNames": "None|Small|Medium|Large",
                    "LevelOffHidden": "false",
                    "SelectorStyle": "1"}
-        Domoticz.Device(Name="Curvature", Unit=CURVATURESWITCH, TypeName="Selector Switch", Options=Options).Create()
+        Domoticz.Device(Name="Curvature", Unit=CURVATURESWITCH, TypeName="Selector Switch", Options=Options, Used=1).Create()
 
 def CreateProgramSwitch():
     if not (PROGRAMSWITCH in Devices):
@@ -188,7 +194,7 @@ def CreateProgramSwitch():
                    "LevelNames": "Off|Frost Proctection|Night|Day",
                    "LevelOffHidden": "false",
                    "SelectorStyle": "1"}
-        Domoticz.Device(Name="Program", Unit=PROGRAMSWITCH, TypeName="Selector Switch", Options=Options).Create()
+        Domoticz.Device(Name="Program", Unit=PROGRAMSWITCH, TypeName="Selector Switch", Options=Optionsi, Used=1).Create()
 
 def CreateParameters():
     CreateSetPoint("Boiler Temp at +20",BOILERTEMPATPLUS20,20)
@@ -222,7 +228,7 @@ def ProcessResponse(data):
 
 
 def ESPCommand(url):
-    Debug("Calling "+url)
+    Debug("Calling "+Hostname+url)
     try:
         response = requests.get(Hostname+url, timeout=3)
         if (response.status_code==200):
@@ -346,16 +352,16 @@ class BasePlugin:
         getSensors()
 
     def onStop(self):
-        Domoticz.Log("onStop called")
+        Debug("onStop called")
 
     def onConnect(self, Connection, Status, Description):
-        Domoticz.Log("onConnect called")
+        Debug("onConnect called")
 
     def onMessage(self, Connection, Data):
-        Domoticz.Log("onMessage called")
+        Debug("onMessage called")
 
     def onCommand(self, Unit, Command, Level, Hue):
-        Domoticz.Log("onCommand called for Unit " + str(Unit) + ": Parameter '" + str(Command) + "', Level: " + str(Level))
+        Debug("onCommand called for Unit " + str(Unit) + ": Parameter '" + str(Command) + "', Level: " + str(Level))
         #if Unit==in {CURVATURESWITCH or Unit==PROGRAMSWITCH:
         if Unit in {CURVATURESWITCH,PROGRAMSWITCH,MINBOILERTEMP,MAXBOILERTEMP,BOILERTEMPATMIN10,BOILERTEMPATPLUS20,SWITCHHEATINGOFFAT,
                 DAYSETPOINT,NIGHTSETPOINT,FROSTPROTECTIONSETPOINT,REFERENCEROOMCOMPENSATION}:
@@ -383,13 +389,13 @@ class BasePlugin:
             Debug("Unhandle command")
 
     def onNotification(self, Name, Subject, Text, Status, Priority, Sound, ImageFile):
-        Domoticz.Log("Notification: " + Name + "," + Subject + "," + Text + "," + Status + "," + str(Priority) + "," + Sound + "," + ImageFile)
+        Debug("Notification: " + Name + "," + Subject + "," + Text + "," + Status + "," + str(Priority) + "," + Sound + "," + ImageFile)
 
     def onDisconnect(self, Connection):
-        Domoticz.Log("onDisconnect called")
+        Debug("onDisconnect called")
 
     def onHeartbeat(self):
-        Domoticz.Log("onHeartbeat called")
+        Debug("onHeartbeat called")
 
         if Devices[PROGRAMSWITCH].nValue==0:
             #Program inactive, just get sensors

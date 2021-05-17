@@ -46,7 +46,7 @@ Weather Dependant Heating Control basically means that the boiler temperature is
     - Here temperature at +20 is set to 20
     - Temperature at -10 is set to 70
     - and you can see the effect of the curvature setting.
-Basically it states what the boiler temperature setting (y axies) should be for every outside temperature (x axis) 
+Basically it states what the boiler temperature setting (y axies) should be for every outside temperature (x axis). For correct settings: See the paragraph below about the heat curve.
 
 2. Then there are additional setpoints you can configure to change the bevaviour
     - "Program": a selector in which you can choose wich porgram to run: Off (no programming, only manual), Day (Boiler temperature is based on heating cuver and reference room compensation), Night (Boiler is switched off, unless below night setpoint), Frost Protection (Boiler is switched off, unless temperature below fp setpoint)
@@ -76,8 +76,24 @@ Basically it states what the boiler temperature setting (y axies) should be for 
 
 Have fun!
 
+## Setting the  heating curve
+Wheter your home heating will be comfortable without generating too much gas uses is entirely up to how well you finetuned the heating curve on your situation. Setting the heat curve might feel complex, I however found out that is it quite easy to get the correct heating curve if follow the following basic rules:
+1. Start with the default values, they should be OK for a lot of situations. 
+2. If it's not comfortable: act on it to make it comforable:
+    - if it's too cold during warm weather: increase the setpoint for temperature at +20
+    - if it's too cold during cold wather: increase the setpoint for temperature at -10 
+    - if it's too cold in the middle of the heat curve (outside temperature around 10 degrees): Increase the curvature
+    - if it's too warm during warm weather: decrease the setpoint for temperature at +20
+    - if it's too warm during cold wather: decrease the setpoint for temperature at -10
+    - if it's too warm in the middle of the heat curve (outside temperature around 10 degrees): Decrease the curvature 
+    - if you house does not warmup fast enough: increase the reference room temperature compensation setting 
+3. if it's always comfortable, try to save gas usage: 
+    - try to decrease both setpoints (until you start loosing comfort)
+    - try to lower the curvature (until you start loosing comfort)
+    - try to decrease the reference room temperature compensation setting (until you start loosing comfort)
+
 ## Contributions
-Last but not least: I built this plugin for according to my own wishes. But if you like to add things, feel free to program them yourself, just as long as you make PR's, so other users can benefit from your enhancements to
+Last but not least: But if you would like extra features in this plugin, feel free to build them yourself, just as long as you make PR's, so other users can benefit from your enhancements as well
 
 ## Testing
 At the moment of writing my opentherm interface was not yet deliverd, so everything is tested, but stubbed and i am still waiting to test again a real boiler ;-)

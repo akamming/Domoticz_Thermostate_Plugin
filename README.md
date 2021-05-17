@@ -47,7 +47,31 @@ Weather Dependant Heating Control basically means that the boiler temperature is
     - and you can see the effect of the curvature setting.
 Basically it states what the boiler temperature setting (y axies) should be for every outside temperature (x axis) 
 
-2. Then there are additional setpoints you can configure
+2. Then there are additional setpoints you can configure to change the bevaviour
     - "Program": a selector in which you can choose wich porgram to run: Off (no programming, only manual), Day (Boiler temperature is based on heating cuver and reference room compensation), Night (Boiler is switched off, unless below night setpoint), Frost Protection (Boiler is switched off, unless temperature below fp setpoint)
-    - "Day Setpoint" and "Temperature compensation": setting the parameters will make sure that if reference room temeperature is below the "day setpoint", the boiler temperature is raised with the difference in temperature, multiplied by the "Temperature compensation" setting. E.g. when you want it bo be 20 Celcius, but actual temp is 18 celcius en temperature compensation is set to 5 degrees Celcius, the boiler temperature will be raised with 10 degreees celcius
-    - "Night S   
+    - "Temperature compensation": setting the parameters will make sure that if reference room temperature is below the "setpoint", the boiler temperature is raised with the difference in temperature, multiplied by the "Temperature compensation" setting. E.g. when you want it bo be 20 Celcius, but actual temp is 18 celcius en temperature compensation is set to 5 degrees Celcius, the boiler temperature will be raised with 10 degreees celcius
+    - "Day Setpoint", "Night Setpoint", "Frost Protection Setpoint". The setpoint values to aim for in the different pograms
+    - "Minimum Boiler Temperature" and "Maximum Boiler Temperature": No matter what the outcome of the calculations above. The boiler temperature will never exceed these values.
+
+3. And then there some devices to let you control the boiler
+    - "Boiler Setpoint". When the program is Off, you can use this setpoint to manually set the boiler termpature
+    - "DHW Setpoint". If you have a SWH system, you can use this setpoint to manually set the water temperature
+    - "EnableCentralHeating". When the program is Off, you can use this switch to manually switch on or off the central heating
+    - "EnableCooling", if your system supports: You can use this switch to manually switch on or off cooling
+    - "EnableHotWater", if your system supports: You can use this switch to manually switch on or off the hotwater system
+
+4. And then there is information reported about the boiler: 
+    - "Central Heating": the reporting of opentherm if central heating is switched on
+    - "Cooling": the reporting of opentherm if cooling is switched on
+    - "HotWater": The reporting of opentherm if hotwater is switched on
+    - "Flame": is the Flame on or Off
+    - "Pressure": The pressure in the boiler
+    - "Modulation": The modulationlevel of the boiler
+    - "BoilerTemperature": The temperature of the boiler
+    - "ReturnTemperature": The temperature of the water returning to the boiler
+    - "DHWTemperature": The temperature of the hot water supply
+
+5. All things work as regular domoticz devices, so you can add devices to your interface to make them visible in the GUI and you can use timers to program the central heating to switch on or of when you like, or change the setpoints at desired moments.
+
+Have fun!
+

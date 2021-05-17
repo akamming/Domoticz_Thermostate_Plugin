@@ -71,7 +71,7 @@ REFERENCEROOMCOMPENSATION=25
 Hostname=""
 OutsideTemperatureIdx=0
 InsideTemperatureIdx=0
-Debug=False
+Debug=True;
 
 def getInt(s):
     try: 
@@ -82,7 +82,7 @@ def getInt(s):
 
 def Debug(text):
     global Debug
-    if (Debug==False):
+    if (Debug):
         Domoticz.Log("DEBUG: "+text)
 
 def Log(text):
@@ -224,7 +224,7 @@ def ProcessResponse(data):
 def ESPCommand(url):
     Debug("Calling "+url)
     try:
-        response = requests.get(url, timeout=3)
+        response = requests.get(Hostname+url, timeout=3)
         if (response.status_code==200):
             Debug("Call succeeded")
             ProcessResponse(response.json())
@@ -235,7 +235,7 @@ def ESPCommand(url):
 
 def getSensors():
     Debug("Get Sensors()")
-    ESPCommand(Hostname+"GetSensors")
+    ESPCommand("GetSensors")
 
 def DeriveTargetTemperatureFromHeatingCurve(CurrentOutsideTemperature):
     #Calculate temperature
@@ -362,23 +362,23 @@ class BasePlugin:
             Devices[Unit].Update(nValue=int(Level), sValue=str(Level))
         elif Unit==ENABLECENTRALHEATING:
             if Command.lower()=="on":
-                ESPCommand(Hostname+"EnableCentralHeating")
+                ESPCommand("EnableCentralHeating")
             else:
-                ESPCommand(Hostname+"DisableCentralHeating")
+                ESPCommand("DisableCentralHeating")
         elif Unit==ENABLEHOTWATER:
             if Command.lower()=="on":
-                ESPCommand(Hostname+"EnableHotWater")
+                ESPCommand("EnableHotWater")
             else:
-                ESPCommand(Hostname+"DisableHotWater")
+                ESPCommand("DisableHotWater")
         elif Unit==ENABLECOOLING:
             if Command.lower()=="on":
-                ESPCommand(Hostname+"EnableCooling")
+                ESPCommand("EnableCooling")
             else:
-                ESPCommand(Hostname+"DisableCooling")
+                ESPCommand("DisableCooling")
         elif Unit==BOILERSETPOINT:
-            ESPCommand(Hostname+"SetBoilerTemp?Temperature="+str(Level))
+            ESPCommand("SetBoilerTemp?Temperature="+str(Level))
         elif Unit==DHWSETPOINT:
-            ESPCommand(Hostname+"SetDHWTemp?Temperature="+str(Level))
+            ESPCommand("SetDHWTemp?Temperature="+str(Level))
         else: 
             Debug("Unhandle command")
 
@@ -410,14 +410,14 @@ class BasePlugin:
                         #We are at the temperature at which we can switchoff heating
                         if Devices[ENABLECENTRALHEATING].nValue==1:
                             Log("Above temperature treshold, switching off boiler")
-                            ESPCommand(Hostname+"DisableCentralHeating")
+                            ESPCommand("DisableCentralHeating")
                     else:
                         #Make sure central heating is switched on
                         if Devices[ENABLECENTRALHEATING].nValue==0:
                             Log("Switching on the boiler")
-                            ESPCommand(Hostname+"EnableCentralHeating")
+                            ESPCommand("EnableCentralHeating")
                         #Send command for boilertermperature
-                        ESPCommand(Hostname+"SetBoilerTemp?Temperature="+str(TargetTemperature))
+                        ESPCommand("SetBoilerTemp?Temperature="+str(TargetTemperature))
                 elif Devices[PROGRAMSWITCH].nValue==20:
                     Debug("Handling Night Program")
                     Succes,CurrentInsideTemperature=GetTemperature(Parameters["Mode3"])
@@ -428,14 +428,14 @@ class BasePlugin:
                             #Check if we have to enable the central heating
                             if Devices[ENABLECENTRALHEATING].nValue==0:
                                 Log("Enable heating on the boiler")
-                                ESPCommand(Hostname+"EnableCentralHeating")
+                                ESPCommand("EnableCentralHeating")
                             #Send command
-                            ESPCommand(Hostname+"SetBoilerTemp?Temperature="+str(TargetTemperature))
+                            ESPCommand("SetBoilerTemp?Temperature="+str(TargetTemperature))
                         else:
                             #above or on setpoint, Heating can be switched off
                             if Devices[ENABLECENTRALHEATING].nValue==1:
                                 Log("Disable heating on the boiler")
-                                ESPCommand(Hostname+"DisableCentralHeating")
+                                ESPCommand("DisableCentralHeating")
                     else:
                         Debug("Unable to execute night program, no inside temperature")
                 elif Devices[PROGRAMSWITCH].nValue==10:
@@ -448,14 +448,14 @@ class BasePlugin:
                             #Check if we have to enable the central heating
                             if Devices[ENABLECENTRALHEATING].nValue==0:
                                 Log("Enable heating on the boiler")
-                                ESPCommand(Hostname+"EnableCentralHeating")
+                                ESPCommand("EnableCentralHeating")
                             #Send command
-                            ESPCommand(Hostname+"SetBoilerTemp?Temperature="+str(TargetTemperature))
+                            ESPCommand("SetBoilerTemp?Temperature="+str(TargetTemperature))
                         else:
                             #above or on setpoint, Heating can be switched off
                             if Devices[ENABLECENTRALHEATING].nValue==1:
                                 Log("Disable heating on the boiler")
-                                ESPCommand(Hostname+"DisableCentralHeating")
+                                ESPCommand("DisableCentralHeating")
                     else:
                         Debug("Unable to execute night program, no inside temperature")
                     

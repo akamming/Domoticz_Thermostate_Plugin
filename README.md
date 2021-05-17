@@ -14,7 +14,7 @@ Weather Dependant Heating Control basically means that the boiler temperature is
 3. which is connected to an opentherm compatible Boiler
 4. A working domoticz installation with at least and make sure you know the IDX numbers of 
     - a working temperature device for measuring the outside temperature
-    - a working temperature device for measureing the inside temperature in 1 room (the "reference room")
+    - a working temperature device for measuring the inside temperature in 1 room (the "reference room")
 
 ## installation
 1. Install arduino software
@@ -37,7 +37,8 @@ Weather Dependant Heating Control basically means that the boiler temperature is
     -  the json command for the external temperature sensor (http://127.0.0.1/json.htm?type=devices&rid=<idx of your temp device>
     -  the json command for the internal  temperature sensor (http://127.0.0.1/json.htm?type=devices&rid=<idx of your temp device>
  11. Click "add"
- 12. You are now ready to use the plugin!
+ 12. If all works well, 25 devices should have been added to the devices tab and you are now ready to use the plugin!
+![image](https://user-images.githubusercontent.com/30364409/118498856-b8ae4100-b726-11eb-8a57-1d12cbe4ae94.png)
 
 ## How to use the plugin
 1. 1st of all your need to configure your heating curve, by setting the setpoints "Boiler Temp at +20", "Boilertemp at -10" and the "Curvator" selector switch. If you want to know what your curve looks like, taak a look at this example:

@@ -32,22 +32,15 @@ Weather Dependant Heating Control basically means that the boiler temperature is
    - git clone https://github.com/akamming/Domoticz_Thermostate_Plugin
    - restart domoticz
    - go to hardware page. The plugin (Weather Dependent Heating Control) should now be visible in the "Type" dropdown
- 10. select the plugin, and enter the following as config
-    -  the  ip adres of your Wemos
-    -  the json command for the external temperature sensor (http://127.0.0.1/json.htm?type=devices&rid=<idx of your temp device>
-    -  the json command for the internal  temperature sensor (http://127.0.0.1/json.htm?type=devices&rid=<idx of your temp device>
+ 10. select the plugin, and enter the following config: the  ip adres of your Wemos, the json command for the outdoor temperature sensor (http://127.0.0.1/json.htm?type=devices&rid=idx_of_your_outdoor_temperature_device) and the json command for the indoor temperature sensor (http://127.0.0.1/json.htm?type=devices&rid=idx_of_your_indoor_temperature_device)
  11. Click "add"
  12. If all works well, 25 devices should have been added to the devices tab and you are now ready to use the plugin!
 ![image](https://user-images.githubusercontent.com/30364409/118498856-b8ae4100-b726-11eb-8a57-1d12cbe4ae94.png)
 
 ## How to use the plugin
-1. 1st of all your need to configure your heating curve, by setting the setpoints "Boiler Temp at +20", "Boilertemp at -10" and the "Curvator" selector switch. If you want to know what your curve looks like, taak a look at this example:
+1. 1st of all your need to configure your heating curve, by setting the setpoints "Boiler Temp at +20", "Boilertemp at -10" and the "Curvator" selector switch. See paragraph below on how to get to the correct curve. Here's an example (+20 settings = 20, -10 setting is 10) with the different curvature settings drawn into it to get an idea:
 ![image](https://user-images.githubusercontent.com/30364409/118477419-f010f380-b70e-11eb-9796-9752f7067d76.png)
-    - Here temperature at +20 is set to 20
-    - Temperature at -10 is set to 70
-    - and you can see the effect of the curvature setting.
-Basically it states what the boiler temperature setting (y axies) should be for every outside temperature (x axis). For correct settings: See the paragraph below about the heat curve.
-
+    
 2. Then there are additional setpoints you can configure to change the bevaviour
     - "Program": a selector in which you can choose wich porgram to run: Off (no programming, only manual), Day (Boiler temperature is based on heating cuver and reference room compensation), Night (Boiler is switched off, unless below night setpoint), Frost Protection (Boiler is switched off, unless temperature below fp setpoint)
     - "Temperature compensation": setting the parameters will make sure that if reference room temperature is below the "setpoint", the boiler temperature is raised with the difference in temperature, multiplied by the "Temperature compensation" setting. E.g. when you want it bo be 20 Celcius, but actual temp is 18 celcius en temperature compensation is set to 5 degrees Celcius, the boiler temperature will be raised with 10 degreees celcius

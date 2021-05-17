@@ -75,3 +75,9 @@ Basically it states what the boiler temperature setting (y axies) should be for 
 
 Have fun!
 
+## Contributions
+Last but not least: I built this plugin for according to my own wishes. But if you like to add things, feel free to program them yourself, just as long as you make PR's, so other users can benefit from your enhancements to
+
+## Testing
+At the moment of writing my opentherm interface was not yet deliverd, so everything is tested, but stubbed and i am still waiting to test again a real boiler ;-)
+

@@ -42,11 +42,12 @@ Weather Dependant Heating Control basically means that the boiler temperature is
 ## How to use the plugin
 1. 1st of all your need to configure your heating curve, by setting the setpoints "Boiler Temp at +20", "Boilertemp at -10" and the "Curvator" selector switch. If you want to know what your curve looks like, taak a look at this example:
 ![image](https://user-images.githubusercontent.com/30364409/118477419-f010f380-b70e-11eb-9796-9752f7067d76.png)
-- Here temperature at +20 is set to 20
-- Temperature at -10 is set to 70
-- and you can see the effect of the curvature setting.
+    - Here temperature at +20 is set to 20
+    - Temperature at -10 is set to 70
+    - and you can see the effect of the curvature setting.
 Basically it states what the boiler temperature setting (y axies) should be for every outside temperature (x axis) 
 
 2. Then there are additional setpoints you can configure
-  - "Day Setpoint" and "Temperature compensation": setting the parameters will make sure that if reference room temeperature is below the "day setpoint", the boiler temperature is raised with the difference in temperature, multiplied by the "Temperature compensation" setting. E.g. when you want it bo be 20 Celcius, but actual temp is 18 celcius en temperature compensation is set to 5 degrees Celcius, the boiler temperature will be raised with 10 degreees celcius
-  -   
+    - "Program": a selector in which you can choose wich porgram to run: Off (no programming, only manual), Day (Boiler temperature is based on heating cuver and reference room compensation), Night (Boiler is switched off, unless below night setpoint), Frost Protection (Boiler is switched off, unless temperature below fp setpoint)
+    - "Day Setpoint" and "Temperature compensation": setting the parameters will make sure that if reference room temeperature is below the "day setpoint", the boiler temperature is raised with the difference in temperature, multiplied by the "Temperature compensation" setting. E.g. when you want it bo be 20 Celcius, but actual temp is 18 celcius en temperature compensation is set to 5 degrees Celcius, the boiler temperature will be raised with 10 degreees celcius
+    - "Night S   

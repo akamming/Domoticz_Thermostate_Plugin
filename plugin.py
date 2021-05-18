@@ -23,12 +23,14 @@
             <li>IP adress or hostname from the Wemos D1 containing the domoticz opentherm handler</li>
             <li>IDX of the device with the outside temperature</li>
             <li>IDX of the device with the reference room termperature, this is optional and is only needed if you want to use reference room compensation</li>
+            <li>The number of minutes the "Daytime Extension" should be active when pressed</li>
         </ul>
     </description>
     <params>
         <param field="Mode1" label="Hostname/IP Adress" width="300px" required="true" default="" />
         <param field="Mode2" label="domoticz json url for outside temperature" default="http://127.0.0.1:8080/json.htm?type=devices&amp;rid=38" required="true" />
         <param field="Mode3" label="domoticz json url for outside temperature" default="http://127.0.0.1:8080/json.htm?type=devices&amp;rid=39"/>
+        <param field="Mode4" label="Daytime Extension Time in minutes" default="120"/>
     </params>
 </plugin>
 """
@@ -36,6 +38,8 @@ import Domoticz
 #from domoticz import Devices
 import requests
 import json
+import datetime
+import time
 
 #Constants
 RequiredInterface=1
@@ -71,7 +75,9 @@ HOLIDAY=27
 
 #Global vars
 Hostname=""
+DayTimeExtensionTime=120
 Debugging=False
+#Debugging=False
 
 def getInt(s):
     try: 
@@ -196,6 +202,12 @@ def CreateProgramSwitch():
                    "SelectorStyle": "1"}
         Domoticz.Device(Name="Program", Unit=PROGRAMSWITCH, TypeName="Selector Switch", Options=Options, Used=1).Create()
 
+def CreateOnOffSwitch(SensorName,UnitID):
+       #Creating devices in case they aren't there...
+        if not (UnitID in Devices):
+            Debug("Creating switch "+SensorName)
+            Domoticz.Device(Name=SensorName, Unit=UnitID, TypeName="Switch", Used=1).Create()
+
 def CreateParameters():
     CreateSetPoint("Boiler Temp at +20",BOILERTEMPATPLUS20,20)
     CreateSetPoint("Boiler Temp at -10",BOILERTEMPATMIN10,70)
@@ -208,8 +220,8 @@ def CreateParameters():
     CreateSetPoint("Night Setpoint",NIGHTSETPOINT,15)
     CreateSetPoint("Frost Protection Setpoint",FROSTPROTECTIONSETPOINT,7)
     CreateSetPoint("Reference Room Temperature Compensation",REFERENCEROOMCOMPENSATION,3)
-    UpdateOnOffSensor("DayTimeExtension",DAYTIMEEXTENSION,"Off")
-    UpdateOnOffSensor("Holiday",HOLIDAY,"Off")
+    CreateOnOffSwitch("DayTimeExtension",DAYTIMEEXTENSION)
+    CreateOnOffSwitch("Holiday",HOLIDAY)
 
 def ProcessResponse(data):
     Debug("ProcessResponse()")
@@ -334,6 +346,7 @@ class BasePlugin:
         global Hostname
         global OutsideTemperatureIdx
         global InsideTemperatureIdx
+        global DayTimeExtensionTime
 
         Debug("onStart called")
        
@@ -341,10 +354,10 @@ class BasePlugin:
         #for  x in Parameters:
         #    Debug("Paramater "+x+" is "+str(Parameters[x]))
         Hostname="http://"+Parameters["Mode1"]+"/" 
-
-        #Do some logging
         Debug("Connection will be made to "+Hostname)
 
+        DayTimeExtensionTime=int(Parameters["Mode4"])
+        Debug("Daytime Extension Time = "+str(DayTimeExtensionTime))
 
         #Create parameter setpoints
         CreateParameters()
@@ -418,9 +431,15 @@ class BasePlugin:
                 
                 if (Devices[PROGRAMSWITCH].nValue==30 and Devices[HOLIDAY].nValue==0) or Devices[DAYTIMEEXTENSION].nValue==1:
                     if Devices[DAYTIMEEXTENSION].nValue==1:
-                        Debug("Day time extension active")
+                        Debug("Day time extension active ["+Devices[DAYTIMEEXTENSION].LastUpdate+"]")
+                        res = datetime.datetime(*(time.strptime(Devices[DAYTIMEEXTENSION].LastUpdate, "%Y-%m-%d %H:%M:%S")[0:6]))
+                        delta=(datetime.datetime.now()-res).total_seconds()
+                        Debug("button was pressed "+str(int(delta))+"seconds ago,"+str(int(DayTimeExtensionTime*60-delta))+" to switch back program again")
+                        if (delta>DayTimeExtensionTime*60):
+                            Log("DaytimeExtension expired, going back to normal program")
+                            UpdateOnOffSensor("DayTime Extension",DAYTIMEEXTENSION,"Off")
                     Debug("Handling Day program")
-                    if CurrentOutsideTemperature>=(Devices[SWITCHHEATINGOFFAT].nValue):
+                    if CurrentOutsideTemperature>(Devices[SWITCHHEATINGOFFAT].nValue):
                         Debug("Temp aboven day treshold")
                         #We are at the temperature at which we can switchoff heating
                         if Devices[ENABLECENTRALHEATING].nValue==1:

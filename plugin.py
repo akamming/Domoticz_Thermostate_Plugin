@@ -66,11 +66,11 @@ DAYSETPOINT=22
 NIGHTSETPOINT=23
 FROSTPROTECTIONSETPOINT=24
 REFERENCEROOMCOMPENSATION=25
+DAYTIMEEXTENSION=26
+HOLIDAY=27
 
 #Global vars
 Hostname=""
-OutsideTemperatureIdx=0
-InsideTemperatureIdx=0
 Debugging=False
 
 def getInt(s):
@@ -208,6 +208,8 @@ def CreateParameters():
     CreateSetPoint("Night Setpoint",NIGHTSETPOINT,15)
     CreateSetPoint("Frost Protection Setpoint",FROSTPROTECTIONSETPOINT,7)
     CreateSetPoint("Reference Room Temperature Compensation",REFERENCEROOMCOMPENSATION,3)
+    UpdateOnOffSensor("DayTimeExtension",DAYTIMEEXTENSION,"Off")
+    UpdateOnOffSensor("Holiday",HOLIDAY,"Off")
 
 def ProcessResponse(data):
     Debug("ProcessResponse()")
@@ -342,7 +344,6 @@ class BasePlugin:
 
         #Do some logging
         Debug("Connection will be made to "+Hostname)
-        Debug("Inside temp device is ["+str(InsideTemperatureIdx)+"], Outside Temp device is ["+str(OutsideTemperatureIdx)+"]")
 
 
         #Create parameter setpoints
@@ -366,6 +367,11 @@ class BasePlugin:
         if Unit in {CURVATURESWITCH,PROGRAMSWITCH,MINBOILERTEMP,MAXBOILERTEMP,BOILERTEMPATMIN10,BOILERTEMPATPLUS20,SWITCHHEATINGOFFAT,
                 DAYSETPOINT,NIGHTSETPOINT,FROSTPROTECTIONSETPOINT,REFERENCEROOMCOMPENSATION}:
             Devices[Unit].Update(nValue=int(Level), sValue=str(Level))
+        elif Unit in {HOLIDAY,DAYTIMEEXTENSION}:
+            NewValue=0
+            if Command=="On":
+                NewValue=1
+            Devices[Unit].Update(nValue=NewValue, sValue=Command)
         elif Unit==ENABLECENTRALHEATING:
             if Command.lower()=="on":
                 ESPCommand("EnableCentralHeating")
@@ -410,13 +416,18 @@ class BasePlugin:
                 #Calculate desired boiler temperature
                 TargetTemperature=DeriveTargetTemperatureFromHeatingCurve(CurrentOutsideTemperature)
                 
-                if Devices[PROGRAMSWITCH].nValue==30:
+                if (Devices[PROGRAMSWITCH].nValue==30 and Devices[HOLIDAY].nValue==0) or Devices[DAYTIMEEXTENSION].nValue==1:
+                    if Devices[DAYTIMEEXTENSION].nValue==1:
+                        Debug("Day time extension active")
                     Debug("Handling Day program")
                     if CurrentOutsideTemperature>=(Devices[SWITCHHEATINGOFFAT].nValue):
+                        Debug("Temp aboven day treshold")
                         #We are at the temperature at which we can switchoff heating
                         if Devices[ENABLECENTRALHEATING].nValue==1:
                             Log("Above temperature treshold, switching off boiler")
                             ESPCommand("DisableCentralHeating")
+                        else:
+                            ESPCommand("GetSensors")
                     else:
                         #Make sure central heating is switched on
                         if Devices[ENABLECENTRALHEATING].nValue==0:
@@ -424,12 +435,14 @@ class BasePlugin:
                             ESPCommand("EnableCentralHeating")
                         #Send command for boilertermperature
                         ESPCommand("SetBoilerTemp?Temperature="+str(TargetTemperature))
-                elif Devices[PROGRAMSWITCH].nValue==20:
-                    Debug("Handling Night Program")
+                elif Devices[PROGRAMSWITCH].nValue==10 or Devices[HOLIDAY].nValue==1:
+                    if Devices[HOLIDAY].nValue==1:
+                        Debug("Holiday program active")
+                    Debug("Handling Frost protection program")
                     Succes,CurrentInsideTemperature=GetTemperature(Parameters["Mode3"])
                     if Succes:
                         Debug("Current inside temperature = "+str(CurrentInsideTemperature))
-                        if CurrentInsideTemperature<Devices[NIGHTSETPOINT].nValue:
+                        if CurrentInsideTemperature<Devices[FROSTPROTECTIONSETPOINT].nValue:
                             #temperature too low, make there is heating
                             #Check if we have to enable the central heating
                             if Devices[ENABLECENTRALHEATING].nValue==0:
@@ -444,12 +457,12 @@ class BasePlugin:
                                 ESPCommand("DisableCentralHeating")
                     else:
                         Debug("Unable to execute night program, no inside temperature")
-                elif Devices[PROGRAMSWITCH].nValue==10:
-                    Debug("Handling Frost protection program")
+                elif Devices[PROGRAMSWITCH].nValue==20:
+                    Debug("Handling Night Program")
                     Succes,CurrentInsideTemperature=GetTemperature(Parameters["Mode3"])
                     if Succes:
                         Debug("Current inside temperature = "+str(CurrentInsideTemperature))
-                        if CurrentInsideTemperature<Devices[FROSTPROTECTIONSETPOINT].nValue:
+                        if CurrentInsideTemperature<Devices[NIGHTSETPOINT].nValue:
                             #temperature too low, make there is heating
                             #Check if we have to enable the central heating
                             if Devices[ENABLECENTRALHEATING].nValue==0:

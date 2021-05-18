@@ -5,6 +5,7 @@ Domoticz Plugin for ESP thermostat with weather dependent heating control
 1. Manual control of several boiler features
 2. Readout of several boiler sensors as devices in domoticz
 3. But mostly: an implementation of a weather dependent heating control thermostat with reference room compensation using any temperature device in domoticz. 
+4. All the advantages of a smart thermostate, without the disadvantages of all your personal data in a public cloud
 
 Weather Dependant Heating Control basically means that the boiler temperature is derived from the outside temperature and very advisable in highly automated homes (e.g.  every room has it's own thermostat, so there is no central thermostat to manage best boiler setting) or if you have a fireplace. I will not desribe here what it is and how to use it, this is much better explained on lots of places on the internet like http://tech-controllers.com/blog/heating-curve---what-is-it-and-how-to-set-it
 
@@ -46,8 +47,10 @@ Weather Dependant Heating Control basically means that the boiler temperature is
     - "Temperature compensation": setting the parameters will make sure that if reference room temperature is below the "setpoint", the boiler temperature is raised with the difference in temperature, multiplied by the "Temperature compensation" setting. E.g. when you want it bo be 20 Celcius, but actual temp is 18 celcius en temperature compensation is set to 5 degrees Celcius, the boiler temperature will be raised with 10 degreees celcius
     - "Day Setpoint", "Night Setpoint", "Frost Protection Setpoint". The setpoint values to aim for in the different pograms
     - "Minimum Boiler Temperature" and "Maximum Boiler Temperature": No matter what the outcome of the calculations above. The boiler temperature will never exceed these values.
+    - A "Holiday" switch: if this is set to "On", it will overrule any program and only make heating active when the reference room temperature drops below the frost protection setpoint
+    - A "Daytime extension" switch: When this switch is on, it will override any program to and for the day program during the extension time which you can set in the plugin configuration afer which this button will be automaticall switched back to "Off". You can also use this switch during the "holiday" time to temperarily overrule the holiday program. 
 
-3. And then there some devices to let you control the boiler
+3. And then there some devices to let you control the boiler directly
     - "Boiler Setpoint". When the program is Off, you can use this setpoint to manually set the boiler termpature
     - "DHW Setpoint". If you have a SWH system, you can use this setpoint to manually set the water temperature
     - "EnableCentralHeating". When the program is Off, you can use this switch to manually switch on or off the central heating

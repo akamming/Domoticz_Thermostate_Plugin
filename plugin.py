@@ -21,15 +21,15 @@
         Please fill the following coordinates to make this plugin work<br/>
         <ul style="list-style-type:square">
             <li>IP adress or hostname from the Wemos D1 containing the domoticz opentherm handler</li>
-            <li>IDX of the device with the outside temperature</li>
-            <li>IDX of the device with the reference room termperature, this is optional and is only needed if you want to use reference room compensation</li>
+            <li>the json command to get your oudside temperature temperature</li>
+            <li>the json command to get your reference room temperature, this is optional and is only needed if you want to use reference room compensation</li>
             <li>The number of minutes the "Daytime Extension" should be active when pressed</li>
         </ul>
     </description>
     <params>
         <param field="Mode1" label="Hostname/IP Adress" width="300px" required="true" default="" />
         <param field="Mode2" label="domoticz json url for outside temperature" default="http://127.0.0.1:8080/json.htm?type=devices&amp;rid=38" required="true" />
-        <param field="Mode3" label="domoticz json url for outside temperature" default="http://127.0.0.1:8080/json.htm?type=devices&amp;rid=39"/>
+        <param field="Mode3" label="domoticz json url for reference room (inside) temperature" default="http://127.0.0.1:8080/json.htm?type=devices&amp;rid=39"/>
         <param field="Mode4" label="Daytime Extension Time in minutes" default="120"/>
     </params>
 </plugin>

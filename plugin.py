@@ -72,6 +72,7 @@ FROSTPROTECTIONSETPOINT=24
 REFERENCEROOMCOMPENSATION=25
 DAYTIMEEXTENSION=26
 HOLIDAY=27
+BOILERONLYONDURINGDAY=28
 
 #Global vars
 Hostname=""
@@ -222,6 +223,7 @@ def CreateParameters():
     CreateSetPoint("Reference Room Temperature Compensation",REFERENCEROOMCOMPENSATION,3)
     CreateOnOffSwitch("DayTimeExtension",DAYTIMEEXTENSION)
     CreateOnOffSwitch("Holiday",HOLIDAY)
+    CreateOnOffSwitch("Boiler Only On During Dayprogram",PROGRAMONDURINGDAY)
 
 def ProcessResponse(data):
     Debug("ProcessResponse()")

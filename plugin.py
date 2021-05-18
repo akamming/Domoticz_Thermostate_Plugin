@@ -72,12 +72,12 @@ FROSTPROTECTIONSETPOINT=24
 REFERENCEROOMCOMPENSATION=25
 DAYTIMEEXTENSION=26
 HOLIDAY=27
-BOILERONLYONDURINGDAY=28
+DHWCONTROL=28
 
 #Global vars
 Hostname=""
 DayTimeExtensionTime=120
-Debugging=False
+Debugging=True
 #Debugging=False
 
 def getInt(s):
@@ -223,7 +223,7 @@ def CreateParameters():
     CreateSetPoint("Reference Room Temperature Compensation",REFERENCEROOMCOMPENSATION,3)
     CreateOnOffSwitch("DayTimeExtension",DAYTIMEEXTENSION)
     CreateOnOffSwitch("Holiday",HOLIDAY)
-    CreateOnOffSwitch("Boiler Only On During Dayprogram",PROGRAMONDURINGDAY)
+    CreateOnOffSwitch("DHW controlled by program",DHWCONTROL)
 
 def ProcessResponse(data):
     Debug("ProcessResponse()")
@@ -382,7 +382,7 @@ class BasePlugin:
         if Unit in {CURVATURESWITCH,PROGRAMSWITCH,MINBOILERTEMP,MAXBOILERTEMP,BOILERTEMPATMIN10,BOILERTEMPATPLUS20,SWITCHHEATINGOFFAT,
                 DAYSETPOINT,NIGHTSETPOINT,FROSTPROTECTIONSETPOINT,REFERENCEROOMCOMPENSATION}:
             Devices[Unit].Update(nValue=int(Level), sValue=str(Level))
-        elif Unit in {HOLIDAY,DAYTIMEEXTENSION}:
+        elif Unit in {HOLIDAY,DAYTIMEEXTENSION,DHWCONTROL}:
             NewValue=0
             if Command=="On":
                 NewValue=1
@@ -432,6 +432,7 @@ class BasePlugin:
                 TargetTemperature=DeriveTargetTemperatureFromHeatingCurve(CurrentOutsideTemperature)
                 
                 if (Devices[PROGRAMSWITCH].nValue==30 and Devices[HOLIDAY].nValue==0) or Devices[DAYTIMEEXTENSION].nValue==1:
+                    #check if we have to deactivate extension
                     if Devices[DAYTIMEEXTENSION].nValue==1:
                         Debug("Day time extension active ["+Devices[DAYTIMEEXTENSION].LastUpdate+"]")
                         res = datetime.datetime(*(time.strptime(Devices[DAYTIMEEXTENSION].LastUpdate, "%Y-%m-%d %H:%M:%S")[0:6]))
@@ -441,6 +442,7 @@ class BasePlugin:
                             Log("DaytimeExtension expired, going back to normal program")
                             UpdateOnOffSensor("DayTime Extension",DAYTIMEEXTENSION,"Off")
                     Debug("Handling Day program")
+                    #Manage Heating
                     if CurrentOutsideTemperature>(Devices[SWITCHHEATINGOFFAT].nValue):
                         Debug("Temp aboven day treshold")
                         #We are at the temperature at which we can switchoff heating
@@ -456,10 +458,21 @@ class BasePlugin:
                             ESPCommand("EnableCentralHeating")
                         #Send command for boilertermperature
                         ESPCommand("SetBoilerTemp?Temperature="+str(TargetTemperature))
+                    #Manage DHW
+                    if Devices[DHWCONTROL].nValue==1:
+                        if  Devices[ENABLEHOTWATER].nValue==0:
+                            Log("Switching on DHW")
+                            ESPCommand("EnableHotWater")
                 elif Devices[PROGRAMSWITCH].nValue==10 or Devices[HOLIDAY].nValue==1:
                     if Devices[HOLIDAY].nValue==1:
                         Debug("Holiday program active")
                     Debug("Handling Frost protection program")
+                    #Manage DHW
+                    if Devices[DHWCONTROL].nValue==1:
+                        if  Devices[ENABLEHOTWATER].nValue==1:
+                            Log("Switching off DHW")
+                            ESPCommand("DisableHotWater")
+                    #Manage Heating
                     Succes,CurrentInsideTemperature=GetTemperature(Parameters["Mode3"])
                     if Succes:
                         Debug("Current inside temperature = "+str(CurrentInsideTemperature))
@@ -476,10 +489,17 @@ class BasePlugin:
                             if Devices[ENABLECENTRALHEATING].nValue==1:
                                 Log("Disable heating on the boiler")
                                 ESPCommand("DisableCentralHeating")
+                            ESPCommand("GetSensors")
                     else:
-                        Debug("Unable to execute night program, no inside temperature")
+                        Debug("Unable to execute Frost Protection program, no inside temperature")
                 elif Devices[PROGRAMSWITCH].nValue==20:
                     Debug("Handling Night Program")
+                    #Manage DHW
+                    if Devices[DHWCONTROL].nValue==1:
+                        if  Devices[ENABLEHOTWATER].nValue==1:
+                            Log("Switching off DHW")
+                            ESPCommand("DisableHotWater")
+                    #Manage Heating
                     Succes,CurrentInsideTemperature=GetTemperature(Parameters["Mode3"])
                     if Succes:
                         Debug("Current inside temperature = "+str(CurrentInsideTemperature))
@@ -496,6 +516,7 @@ class BasePlugin:
                             if Devices[ENABLECENTRALHEATING].nValue==1:
                                 Log("Disable heating on the boiler")
                                 ESPCommand("DisableCentralHeating")
+                            ESPCommand("GetSensors")
                     else:
                         Debug("Unable to execute night program, no inside temperature")
                     

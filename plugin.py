@@ -3,13 +3,20 @@
 # Author: akamming
 #
 """
-<plugin key="OpenTherm" name="Weather Dependent Heating Control" author="akamming" version="1.0.0" wikilink="http://www.domoticz.com/wiki/plugins/plugin.html" externallink="https://github.com/akamming/esp_domoticz_opentherm_handler/">
+<plugin key="OpenThermWDHC" name="OpenTherm Weather Dependent Heating Control" author="akamming" version="1.0.0" wikilink="http://www.domoticz.com/wiki/plugins/plugin.html" externallink="https://github.com/akamming/esp_domoticz_opentherm_handler/">
     <description>
         <h2>Weather Dependent Heating Control</h2><br/>
         Use Domoticz to control your OpenTherm Boiler<br/>
         <br/>
         This plugin will make domoticz act as a thermostate, which will set the boiler temperature based on outside temperature, basically using a heating curve. If you want to know what a heating curve is, please look at articles like http://tech-controllers.com/blog/heating-curve---what-is-it-and-how-to-set-it<br/><br/>
-        Requires a Wemos D1 with an opentherm adapter and domoticz helper firmware (https://github.com/akamming/esp_domoticz_opentherm_handler)<br/>
+        <h3>Requisites</h3>
+        In order to make this plugin work you need<br/>
+        <ul style="list-style-type:square">
+            <li>An ESP8266 device like the Wemos D1,</li>
+            <li>which is flashed with the  domoticz helper firmware (https://github.com/akamming/esp_domoticz_opentherm_handler)</li>
+            <li>and is connected to an opentherm adapter (http://ihormelnyk.com/opentherm_adapter or https://diyless.com/product/master-opentherm-shield),</li>
+            <li>Which is connected to your OpenTherm Boiler</li>
+        </ul>
         <h3>Features</h3>
         <ul style="list-style-type:square">
             <li>Read your boiler sensors</li>
@@ -21,15 +28,19 @@
         Please fill the following coordinates to make this plugin work<br/>
         <ul style="list-style-type:square">
             <li>IP adress or hostname from the Wemos D1 containing the domoticz opentherm handler</li>
-            <li>the json command to get your oudside temperature temperature</li>
+            <li>the json command to get your outside temperature temperature</li>
             <li>the json command to get your reference room temperature, this is optional and is only needed if you want to use reference room compensation</li>
             <li>The number of minutes the "Daytime Extension" should be active when pressed</li>
         </ul>
     </description>
     <params>
-        <param field="Mode1" label="Hostname/IP Adress" width="300px" required="true" default="" />
-        <param field="Mode2" label="domoticz json url for outside temperature" default="http://127.0.0.1:8080/json.htm?type=devices&amp;rid=38" required="true" />
-        <param field="Mode3" label="domoticz json url for reference room (inside) temperature" default="http://127.0.0.1:8080/json.htm?type=devices&amp;rid=39"/>
+        <param field="Address" label="Domoticz IP Address" width="200px" required="true" default="localhost"/>
+        <param field="Port" label="Port" width="40px" required="true" default="8080"/>
+        <param field="Username" label="Username" width="200px" required="false" default=""/>
+        <param field="Password" label="Password" width="200px" required="false" default=""/>
+        <param field="Mode1" label="Hostname/IP Adress" width="200px" required="true" default="" />
+        <param field="Mode2" label="domoticz json url for outside temperature" default="http://127.0.0.1:8080/json.htm?type=devices&amp;rid=38" width="400px" required="true" />
+        <param field="Mode3" label="domoticz json url for reference room (inside) temperature" default="http://127.0.0.1:8080/json.htm?type=devices&amp;rid=39" width="400px" />
         <param field="Mode4" label="Daytime Extension Time in minutes" default="120"/>
     </params>
 </plugin>
@@ -259,84 +270,101 @@ def getSensors():
     Debug("Get Sensors()")
     ESPCommand("GetSensors")
 
-def DeriveTargetTemperatureFromHeatingCurve(CurrentOutsideTemperature):
+def CalculateBoilerSetPoint():
     #Calculate temperature
     TargetTemperature=0
-
-    if (CurrentOutsideTemperature>20):
-        #when above 20 degrees, use minimum termpature from heating curve
-        TargetTemperature=Devices[BOILERTEMPATPLUS20].nValue
-    else:
-        Curvature=Devices[CURVATURESWITCH].nValue/10+1
-        MaxYDelta=Devices[BOILERTEMPATMIN10].nValue-Devices[BOILERTEMPATPLUS20].nValue #boilertemp at -10 minus boilertemp at +20
-        MaxXDelta=30 # 20 - (-10)=30
-        MaxToReach=MaxYDelta**Curvature
-        TargetTemperature=((20-CurrentOutsideTemperature)/MaxXDelta*(MaxToReach))**(1/Curvature)+Devices[BOILERTEMPATPLUS20].nValue
-        Debug("Curvature = "+str(Curvature)+", MaxYDelta="+str(MaxYDelta))
-    Debug("Calculated temperature according to heating curve: "+str(TargetTemperature))
-
-    #Perform reference room compensation if 
-    Debug("Checking for room temperature compensation")
-    Compensation=Devices[REFERENCEROOMCOMPENSATION].nValue
-    if Compensation>0:
-        Succes,CurrentInsideTemperature=GetTemperature(Parameters["Mode3"])
-        temperaturetoreach=0
-        if Succes:
-            #check to which target to get
-            if Devices[PROGRAMSWITCH].nValue==30:
-                temperaturetoreach=Devices[DAYSETPOINT].nValue
-            elif Devices[PROGRAMSWITCH].nValue==20:
-                temperaturetoreach=Devices[NIGHTSETPOINT].nValue
-            elif Devices[PROGRAMSWITCH].nValue==10:
-                temperaturetoreach=Devices[FROSTPROTECTIONSETPOINT].nValue
-            else:
-                Log("This code should not be reached, settings parameters to disable compensation")
-                temperaturetoreach=20
-                Compensation=0
-
-            if CurrentInsideTemperature<temperaturetoreach:
-                Debug("Applying reference room temperature compensation: "+str((temperaturetoreach-CurrentInsideTemperature)*Compensation))
-                TargetTemperature+=(temperaturetoreach-CurrentInsideTemperature)*Compensation
-            else:
-                Debug("temperature above setpoint, no reference room compensation")
+    Debug("Calculating Target Temperature")
+    Succes,CurrentOutsideTemperature=GetTemperature(Parameters["Mode2"])
     
-    #Checking max parameters
-    if TargetTemperature>Devices[MAXBOILERTEMP].nValue:
-        Debug("Calculated temp above max temp, correcting")
-        TargetTemperature=Devices[MAXBOILERTEMP].nValue
-
-    #Checking mn parameters
-    if TargetTemperature<Devices[MINBOILERTEMP].nValue:
-        Debug("Calculated temp below min temp, correcting")
-        TargetTemperature=Devices[MINBOILERTEMP].nValue
-
-    return TargetTemperature
-
-def GetTemperature(url):
-    try:
-        Debug("Retrieving "+url)
-        response = requests.get(url)
-        if response.status_code==200:
-            #we have a succesful http call, let's try to interpret
-            data = response.json()
-            if (data["status"]=="OK"):
-                #All is OK, read temperature
-                CurrentTemperature=data["result"][0]["Temp"]
-                Debug("Current Temperature is "+str(CurrentTemperature))
-                return True,CurrentTemperature
-            else:
-                #Domoticz Error
-                Log("domoticz error getting temperature "+response.status_code+" : "+response.text+", unable to execute program")
-                return False,0
-        else:
-            #HTTP error
-            Log("domoticz error getting temperature "+response.status_code+" : "+response.text+", unable to execute program")
-            return False,0
-    except:
-        #Exception
-        Log("Error: Unable to get temperature on "+url)
+    if not Succes:
+        Debug("Failed to get calculate Target temperature")
         return False,0
 
+    if Success:
+        if (CurrentOutsideTemperature>20):
+            #when above 20 degrees, use minimum termpature from heating curve
+            TargetTemperature=Devices[BOILERTEMPATPLUS20].nValue
+            Debug("Outside temperature above bottom of Heating Curve, setting to lowest point: "+str(Devices[BOILERTEMPATPLUS20].nValue))
+        else:
+            Curvature=Devices[CURVATURESWITCH].nValue/10+1
+            MaxYDelta=Devices[BOILERTEMPATMIN10].nValue-Devices[BOILERTEMPATPLUS20].nValue #boilertemp at -10 minus boilertemp at +20
+            MaxXDelta=30 # 20 - (-10)=30
+            MaxToReach=MaxYDelta**Curvature
+            TargetTemperature=((20-CurrentOutsideTemperature)/MaxXDelta*(MaxToReach))**(1/Curvature)+Devices[BOILERTEMPATPLUS20].nValue
+        Debug("Calculated temperature according to heating curve: "+str(TargetTemperature))
+
+        #Perform reference room compensation if 
+        Debug("Checking for room temperature compensation")
+        Compensation=Devices[REFERENCEROOMCOMPENSATION].nValue
+        if Compensation>0:
+            Debug("Reference Room Compensation is switched on, checking if we have to compensate")
+            Succes,CurrentInsideTemperature=GetTemperature(Parameters["Mode3"])
+            temperaturetoreach=0
+            if Succes:
+                #check to which target to get
+                if Devices[PROGRAMSWITCH].nValue==30:
+                    temperaturetoreach=Devices[DAYSETPOINT].nValue
+                elif Devices[PROGRAMSWITCH].nValue==20:
+                    temperaturetoreach=Devices[NIGHTSETPOINT].nValue
+                elif Devices[PROGRAMSWITCH].nValue==10:
+                    temperaturetoreach=Devices[FROSTPROTECTIONSETPOINT].nValue
+                else:
+                    Log("This code should not be reached, settings parameters to disable compensation")
+                    temperaturetoreach=20
+                    Compensation=0
+
+                if CurrentInsideTemperature<temperaturetoreach:
+                    Debug("Temperature below setpoint, applying reference room temperature compensation: "+str((temperaturetoreach-CurrentInsideTemperature)*Compensation))
+                    TargetTemperature+=(temperaturetoreach-CurrentInsideTemperature)*Compensation
+                else:
+                    Debug("temperature above setpoint, no reference room compensation")
+        
+        #Checking max parameters
+        if TargetTemperature>Devices[MAXBOILERTEMP].nValue:
+            Debug("Calculated temp above max temp, correcting")
+            TargetTemperature=Devices[MAXBOILERTEMP].nValue
+
+        #Checking mn parameters
+        if TargetTemperature<Devices[MINBOILERTEMP].nValue:
+            Debug("Calculated temp below min temp, correcting")
+            TargetTemperature=Devices[MINBOILERTEMP].nValue
+
+        return True,TargetTemperature
+
+def DomoticzAPI(APICall):
+    resultJson = None
+    url = "http://{}:{}/json.htm?{}".format(Parameters["Address"], Parameters["Port"], parse.quote(APICall, safe="&="))
+    Domoticz.Debug("Calling domoticz API: {}".format(url))
+    try:
+        req = request.Request(url)
+        if Parameters["Username"] != "":
+            Domoticz.Debug("Add authentification for user {}".format(Parameters["Username"]))
+            credentials = ('%s:%s' % (Parameters["Username"], Parameters["Password"]))
+            encoded_credentials = base64.b64encode(credentials.encode('ascii'))
+            req.add_header('Authorization', 'Basic %s' % encoded_credentials.decode("ascii"))
+
+        response = request.urlopen(req)
+        if response.status == 200:
+            resultJson = json.loads(response.read().decode('utf-8'))
+            if resultJson["status"] != "OK":
+                Domoticz.Error("Domoticz API returned an error: status = {}".format(resultJson["status"]))
+                resultJson = None
+        else:
+            Domoticz.Error("Domoticz API: http error = {}".format(response.status))
+    except:
+        Domoticz.Error("Error calling '{}'".format(url))
+    return resultJson
+
+def GetTemperature(TemperatureDeviceIDX):
+    data = DomoticzAPI("type=devices&rid="+str(TemperatureDeviceIX))
+    try:
+        CurrentTemperature=data["result"][0]["Temp"]
+        Debug("Current Temperature is "+str(CurrentTemperature))
+        return True,CurrentTemperature
+    except:
+        #Domoticz Error
+        Log("domoticz error getting temperature "+response.status_code+" : "+response.text+", unable to execute program")
+        return False,0
 
 class BasePlugin:
     enabled = False
@@ -424,13 +452,8 @@ class BasePlugin:
             getSensors()
         else:
             #Program Active, try to get outside temperature
-            Succes,CurrentOutsideTemperature=GetTemperature(Parameters["Mode2"])
+            Succes,TargetTemperature=CalculateBoilerSetPoint()
             if Succes:
-                Debug("Current Outside Temperature is "+str(CurrentOutsideTemperature))
-
-                #Calculate desired boiler temperature
-                TargetTemperature=DeriveTargetTemperatureFromHeatingCurve(CurrentOutsideTemperature)
-                
                 if (Devices[PROGRAMSWITCH].nValue==30 and Devices[HOLIDAY].nValue==0) or Devices[DAYTIMEEXTENSION].nValue==1:
                     #check if we have to deactivate extension
                     if Devices[DAYTIMEEXTENSION].nValue==1:

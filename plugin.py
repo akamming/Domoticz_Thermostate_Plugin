@@ -35,12 +35,12 @@
     </description>
     <params>
         <param field="Address" label="Domoticz IP Address" width="200px" required="true" default="localhost"/>
-        <param field="Port" label="Port" width="40px" required="true" default="8080"/>
-        <param field="Username" label="Username" width="200px" required="false" default=""/>
-        <param field="Password" label="Password" width="200px" required="false" default=""/>
-        <param field="Mode1" label="Hostname/IP Adress" width="200px" required="true" default="" />
-        <param field="Mode2" label="domoticz json url for outside temperature" default="http://127.0.0.1:8080/json.htm?type=devices&amp;rid=38" width="400px" required="true" />
-        <param field="Mode3" label="domoticz json url for reference room (inside) temperature" default="http://127.0.0.1:8080/json.htm?type=devices&amp;rid=39" width="400px" />
+        <param field="Port" label="Domoticz Port" width="40px" required="true" default="8080"/>
+        <param field="Username" label="Domoticz Username" width="200px" required="false" default=""/>
+        <param field="Password" label="Domoticz Password" width="200px" required="false" default=""/>
+        <param field="Mode1" label="ESP Hostname" width="200px" required="true" default="" />
+        <param field="Mode2" label="idx for outside temperature device" default="http://127.0.0.1:8080/json.htm?type=devices&amp;rid=38" width="100px" required="true" />
+        <param field="Mode3" label="idx for reference room temperature device" default="http://127.0.0.1:8080/json.htm?type=devices&amp;rid=39" width="100px" />
         <param field="Mode4" label="Daytime Extension Time in minutes" default="120"/>
     </params>
 </plugin>
@@ -51,6 +51,10 @@ import requests
 import json
 import datetime
 import time
+import urllib.parse as parse
+import urllib.request as request
+import base64 
+
 
 #Constants
 RequiredInterface=1
@@ -88,8 +92,8 @@ DHWCONTROL=28
 #Global vars
 Hostname=""
 DayTimeExtensionTime=120
-Debugging=True
-#Debugging=False
+#Debugging=True
+Debugging=False
 
 def getInt(s):
     try: 
@@ -274,13 +278,14 @@ def CalculateBoilerSetPoint():
     #Calculate temperature
     TargetTemperature=0
     Debug("Calculating Target Temperature")
+    CurrentInsideTemperature=None
     Succes,CurrentOutsideTemperature=GetTemperature(Parameters["Mode2"])
     
     if not Succes:
         Debug("Failed to get calculate Target temperature")
-        return False,0
+        return False,Null,Null,Null
 
-    if Success:
+    if Succes:
         if (CurrentOutsideTemperature>20):
             #when above 20 degrees, use minimum termpature from heating curve
             TargetTemperature=Devices[BOILERTEMPATPLUS20].nValue
@@ -292,15 +297,15 @@ def CalculateBoilerSetPoint():
             MaxToReach=MaxYDelta**Curvature
             TargetTemperature=((20-CurrentOutsideTemperature)/MaxXDelta*(MaxToReach))**(1/Curvature)+Devices[BOILERTEMPATPLUS20].nValue
         Debug("Calculated temperature according to heating curve: "+str(TargetTemperature))
-
-        #Perform reference room compensation if 
-        Debug("Checking for room temperature compensation")
-        Compensation=Devices[REFERENCEROOMCOMPENSATION].nValue
-        if Compensation>0:
-            Debug("Reference Room Compensation is switched on, checking if we have to compensate")
-            Succes,CurrentInsideTemperature=GetTemperature(Parameters["Mode3"])
-            temperaturetoreach=0
-            if Succes:
+        
+        Succes,CurrentInsideTemperature=GetTemperature(Parameters["Mode3"])
+        if Succes:
+            #Perform reference room compensation if 
+            Debug("Checking for room temperature compensation")
+            Compensation=Devices[REFERENCEROOMCOMPENSATION].nValue
+            if Compensation>0:
+                Debug("Reference Room Compensation is switched on, checking if we have to compensate")
+                temperaturetoreach=0
                 #check to which target to get
                 if Devices[PROGRAMSWITCH].nValue==30:
                     temperaturetoreach=Devices[DAYSETPOINT].nValue
@@ -318,7 +323,9 @@ def CalculateBoilerSetPoint():
                     TargetTemperature+=(temperaturetoreach-CurrentInsideTemperature)*Compensation
                 else:
                     Debug("temperature above setpoint, no reference room compensation")
-        
+        else:
+            Log("Error: Unable to get reference room termperature")
+            
         #Checking max parameters
         if TargetTemperature>Devices[MAXBOILERTEMP].nValue:
             Debug("Calculated temp above max temp, correcting")
@@ -329,7 +336,7 @@ def CalculateBoilerSetPoint():
             Debug("Calculated temp below min temp, correcting")
             TargetTemperature=Devices[MINBOILERTEMP].nValue
 
-        return True,TargetTemperature
+        return True,TargetTemperature,CurrentOutsideTemperature,CurrentInsideTemperature
 
 def DomoticzAPI(APICall):
     resultJson = None
@@ -356,7 +363,7 @@ def DomoticzAPI(APICall):
     return resultJson
 
 def GetTemperature(TemperatureDeviceIDX):
-    data = DomoticzAPI("type=devices&rid="+str(TemperatureDeviceIX))
+    data = DomoticzAPI("type=devices&rid="+str(TemperatureDeviceIDX))
     try:
         CurrentTemperature=data["result"][0]["Temp"]
         Debug("Current Temperature is "+str(CurrentTemperature))
@@ -452,7 +459,7 @@ class BasePlugin:
             getSensors()
         else:
             #Program Active, try to get outside temperature
-            Succes,TargetTemperature=CalculateBoilerSetPoint()
+            Succes,TargetTemperature,CurrentOutsideTemperature,CurrentInsideTemperature=CalculateBoilerSetPoint()
             if Succes:
                 if (Devices[PROGRAMSWITCH].nValue==30 and Devices[HOLIDAY].nValue==0) or Devices[DAYTIMEEXTENSION].nValue==1:
                     #check if we have to deactivate extension
@@ -496,8 +503,7 @@ class BasePlugin:
                             Log("Switching off DHW")
                             ESPCommand("DisableHotWater")
                     #Manage Heating
-                    Succes,CurrentInsideTemperature=GetTemperature(Parameters["Mode3"])
-                    if Succes:
+                    if CurrentInsideTemperature:
                         Debug("Current inside temperature = "+str(CurrentInsideTemperature))
                         if CurrentInsideTemperature<Devices[FROSTPROTECTIONSETPOINT].nValue:
                             #temperature too low, make there is heating
@@ -524,7 +530,7 @@ class BasePlugin:
                             ESPCommand("DisableHotWater")
                     #Manage Heating
                     Succes,CurrentInsideTemperature=GetTemperature(Parameters["Mode3"])
-                    if Succes:
+                    if CurrentInsideTemperature:
                         Debug("Current inside temperature = "+str(CurrentInsideTemperature))
                         if CurrentInsideTemperature<Devices[NIGHTSETPOINT].nValue:
                             #temperature too low, make there is heating

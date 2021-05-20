@@ -51,7 +51,7 @@
         <param field="Port" label="Domoticz Port" width="40px" required="true" default="8080"/>
         <param field="Username" label="Domoticz Username" width="200px" required="false" default=""/>
         <param field="Password" label="Domoticz Password" width="200px" required="false" default=""/>
-        <param field="Mode1" label="ESP Hostname" default="domesphelper.local" width="200px" required="true" default="" />
+        <param field="Mode1" label="ESP Hostname" default="domesphelper.local" width="200px" required="true"  />
         <param field="Mode2" label="idx for outside temperature device" default="514" width="100px" required="true" />
         <param field="Mode3" label="idx for reference room temperature device" default="685" width="100px" required="true" />
         <param field="Mode4" label="Daytime Extension Time in minutes" default="120" required="true" />
@@ -105,8 +105,8 @@ DHWCONTROL=28
 #Global vars
 Hostname=""
 DayTimeExtensionTime=120
+Debugging=True
 #Debugging=True
-Debugging=False
 
 def getInt(s):
     try: 
@@ -124,7 +124,7 @@ def Log(text):
     Domoticz.Log(text)
 
 def UpdateCustomSensor(SensorName,UnitID,Value):
-       #Creating devices in case they aren't there...
+        #Creating devices in case they aren't there...
         if not (UnitID in Devices):
             Debug("Creating device "+SensorName)
             Domoticz.Device(Name=SensorName, Unit=UnitID, TypeName="Custom", Used=1).Create()
@@ -132,7 +132,7 @@ def UpdateCustomSensor(SensorName,UnitID,Value):
         Domoticz.Log("Counter ("+Devices[UnitID].Name+")")
 
 def UpdatePercentageSensor(SensorName,UnitID,Value):
-       #Creating devices in case they aren't there...
+        #Creating devices in case they aren't there...
         if not (UnitID in Devices):
             Debug("Creating device "+SensorName)
             Domoticz.Device(Name=SensorName, Unit=UnitID, TypeName="Percentage", Used=1).Create()
@@ -140,7 +140,7 @@ def UpdatePercentageSensor(SensorName,UnitID,Value):
         Domoticz.Log("Percentage ("+Devices[UnitID].Name+")")
 
 def UpdateOnOffSensor(SensorName,UnitID,Value):
-       #Creating devices in case they aren't there...
+        #Creating devices in case they aren't there...
         if not (UnitID in Devices):
             Debug("Creating device "+SensorName)
             Domoticz.Device(Name=SensorName, Unit=UnitID, TypeName="Switch", Used=1).Create()
@@ -152,16 +152,17 @@ def UpdateOnOffSensor(SensorName,UnitID,Value):
             Domoticz.Log("Switch ("+Devices[UnitID].Name+")")
 
 def UpdateSetpoint(SensorName,UnitID,Value):
-       #Creating devices in case they aren't there...
+        #Creating devices in case they aren't there...
         if not (UnitID in Devices):
             Debug("Creating device "+SensorName)
-            Domoticz.Device(Name=SensorName, Unit=UnitID, Type=242, Subtype=1, Used=1).Create()
+            Domoticz.Device(Name=SensorName, Unit=UnitID, Type=242, Subtype=1, Used=1, Image=15).Create()
         if int(Value)!=Devices[UnitID].nValue:
             Devices[UnitID].Update(nValue=int(Value), sValue=str(Value))
             Domoticz.Log("Setpoint ("+Devices[UnitID].Name+")")
 
 def UpdateTemperatureSensor(SensorName,UnitID,Value):
-       #Creating devices in case they aren't there...
+        Debug("Updating temperature sensor")
+        #Creating devices in case they aren't there...
         if not (UnitID in Devices):
             Debug("Creating device "+SensorName)
             Domoticz.Device(Name=SensorName, Unit=UnitID, TypeName="Temperature", Used=1).Create()
@@ -177,7 +178,7 @@ def UpdatePressureSensor(SensorName,UnitID,Value):
         Domoticz.Log("Pressure ("+Devices[UnitID].Name+")")
 
 def UpdateSensors(data):
-    #Update steering vars
+    #Debug("Update steering vars")
     UpdateOnOffSensor("EnableCentralHeating",ENABLECENTRALHEATING,data["EnableCentralHeating"])
     UpdateOnOffSensor("EnableHotWater",ENABLEHOTWATER,data["EnableHotWater"])
     UpdateOnOffSensor("EnableCooling",ENABLECOOLING,data["EnableCooling"])
@@ -201,7 +202,7 @@ def UpdateSensors(data):
 def CreateSetPoint(SensorName,UnitID,DefaultValue):
     if not (UnitID in Devices):
         Debug("Creating setpoint "+SensorName)
-        Domoticz.Device(Name=SensorName, Unit=UnitID, Type=242, Subtype=1, Used=1).Create()
+        Domoticz.Device(Name=SensorName, Unit=UnitID, Type=242, Subtype=1, Used=1, Image=15).Create()
         Devices[UnitID].Update(nValue=int(DefaultValue), sValue=str(DefaultValue))
 
 def CreateOnOffDevice(SensorName,UnitID,DefaultValue):
@@ -219,7 +220,7 @@ def CreateCurvatureSwitch():
         Options = {"LevelActions": "|| ||", 
                    "LevelNames": "None|Small|Medium|Large",
                    "LevelOffHidden": "false",
-                   "SelectorStyle": "1"}
+                   "SelectorStyle": "0"}
         Domoticz.Device(Name="Curvature", Unit=CURVATURESWITCH, TypeName="Selector Switch", Options=Options, Used=1).Create()
 
 def CreateProgramSwitch():
@@ -228,7 +229,7 @@ def CreateProgramSwitch():
         Options = {"LevelActions": "|| ||", 
                    "LevelNames": "Off|Frost Proctection|Night|Day",
                    "LevelOffHidden": "false",
-                   "SelectorStyle": "1"}
+                   "SelectorStyle": "0"}
         Domoticz.Device(Name="Program", Unit=PROGRAMSWITCH, TypeName="Selector Switch", Options=Options, Used=1).Create()
 
 def CreateOnOffSwitch(SensorName,UnitID):
@@ -264,7 +265,7 @@ def ProcessResponse(data):
         Log("ERROR: Could not get InterfaceVersion")
 
     if ifversion==RequiredInterface:
-        #Debug("We have the correct interface")
+        Debug("We have the correct interface")
         UpdateSensors(data)
     else:
         Log("Error Interace version "+RequiredInterface+" required, make sure you have latest plugin and firmware")

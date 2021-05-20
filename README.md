@@ -96,7 +96,7 @@ Have fun!
 ## Setting the  heating curve
 Wheter your home heating will be comfortable without generating too much gas uses is entirely up to how well you finetuned the heating curve on your situation. Setting the heat curve might feel complex, I however found out that is it quite easy to get the correct heating curve if follow the following basic rules:
 1. Start with the default values, they should be OK for a lot of situations. 
-2. If it's not comfortable: act on it to make it comforable:
+2. If it's not comfortable: act on it to make it comfortable:
     - if it's too cold during warm weather: increase the setpoint for temperature at +20
     - if it's too cold during cold wather: increase the setpoint for temperature at -10 
     - if it's too cold in the middle of the heat curve (outside temperature around 10 degrees): Increase the curvature

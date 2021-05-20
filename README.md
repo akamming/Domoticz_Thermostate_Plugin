@@ -34,7 +34,11 @@ My current boiler is end of life and i needed a new one. My current thermostate 
 3. Install the opentherm handler firmware 
 4. Connect the Wemos D1 to the opentherm adapter on pin 2 and 3
 5. Connect the opentherm adapter to the boiler 
-6. Boot the Wemos D1
+6. Prepare the Wemos D1 by 
+    - powering on the device
+    - connect with a device to WiFi Access Point "Thermostat"
+    - browser to http://192.168.4.1 
+    - follow instructions to connect the ESP to correct WiFi network
 7. Connect to Access Point "Thermostat" and follow the instructions to connect the wemos to your wifi connection
 8. Log into your router and make sure the Wemos gets a static ip adress
 9. install this plugin into domoticz by     
@@ -42,9 +46,15 @@ My current boiler is end of life and i needed a new one. My current thermostate 
    - git clone https://github.com/akamming/Domoticz_Thermostate_Plugin
    - restart domoticz
    - go to hardware page. The plugin (Weather Dependent Heating Control) should now be visible in the "Type" dropdown
- 10. select the plugin, and enter the following config: the  ip adres of your Wemos, the json command for the outdoor temperature sensor (http://127.0.0.1/json.htm?type=devices&rid=idx_of_your_outdoor_temperature_device) and the json command for the indoor temperature sensor (http://127.0.0.1/json.htm?type=devices&rid=idx_of_your_indoor_temperature_device)
+ 10. select the plugin, and enter the following config:
+    - the hostname/ipadress and port of domoticz (mandatory, default works with standard domoticz installation), 
+    - option username/password for domoticz (mandatory, in standard domoticz install, you can leave this empty) 
+    - the  hostname / ip adres of your Wemos  (mandatory, in standard network config, domoticz can find the ESP using the default setting)
+    - the IDX of the domoticz device which measures the outdoor temperature (mandatory)
+    - idx IDX of the domoticz device which measures temperature in the reference room (mandatory)) 
+    - and a duration for the "Daytime Extensions" button in minutes 
  11. Click "add"
- 12. If all works well, 25 devices should have been added to the devices tab and you are now ready to use the plugin!
+ 12. If all works well, several devices should have been added to the devices tab and you are now ready to use the plugin!
 ![image](https://user-images.githubusercontent.com/30364409/118498856-b8ae4100-b726-11eb-8a57-1d12cbe4ae94.png)
 
 ## How to use the plugin
@@ -58,6 +68,7 @@ My current boiler is end of life and i needed a new one. My current thermostate 
     - "Minimum Boiler Temperature" and "Maximum Boiler Temperature": No matter what the outcome of the calculations above. The boiler temperature will never exceed these values.
     - A "Holiday" switch: if this is set to "On", it will overrule any program and only make heating active when the reference room temperature drops below the frost protection setpoint
     - A "Daytime extension" switch: When this switch is on, it will override any program to and for the day program during the extension time which you can set in the plugin configuration afer which this button will be automaticall switched back to "Off". You can also use this switch during the "holiday" time to temperarily overrule the holiday program. 
+    - A "DHW controlled by program" switch: When this switch is on, this forces the boiler DHW function to be on during daytime program and switched off during night or frost protection program.
 
 3. And then there some devices to let you control the boiler directly
     - "Boiler Setpoint". When the program is Off, you can use this setpoint to manually set the boiler termpature
@@ -77,7 +88,14 @@ My current boiler is end of life and i needed a new one. My current thermostate 
     - "ReturnTemperature": The temperature of the water returning to the boiler
     - "DHWTemperature": The temperature of the hot water supply
 
-5. All things work as regular domoticz devices, so you can add devices to your interface to make them visible in the GUI and you can use timers to program the central heating to switch on or of when you like, or change the setpoints at desired moments.
+5. All things work as regular domoticz devices, so you can use the "regular" domoticz magic to
+    - add devices to your favorites or room definitions to create a GUI for the thermostast  
+    - set timers on the "Program" to switch between day, night and frost protection programs  
+    - set timers on the setpoints to get different levels of comfort during the day
+    - set timers on the "Enable DHW" switch if you would like to save gas by switching off  
+    - set alarms to alert you if if the waterpressure is dropping below a certain level and you want to refill before your boiler gets into an error state
+    - make the buttons part of a scene to have the heating change as well in certain scenes
+    - etc..etc... 
 
 Have fun!
 
@@ -101,5 +119,5 @@ Wheter your home heating will be comfortable without generating too much gas use
 Last but not least: But if you would like extra features in this plugin, feel free to build them yourself, just as long as you make PR's, so other users can benefit from your enhancements as well
 
 ## Testing
-At the moment of writing my opentherm interface was not yet deliverd, so everything is tested, but stubbed and i am still waiting to test again a real boiler ;-)
+At the moment of writing my opentherm interface was not yet delivered, so everything is tested, but stubbed and i am still waiting to test again a real boiler ;-)
 

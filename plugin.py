@@ -8,7 +8,20 @@
         <h2>Weather Dependent Heating Control</h2><br/>
         Use Domoticz to control your OpenTherm Boiler<br/>
         <br/>
-        This plugin will make domoticz act as a thermostate, which will set the boiler temperature based on outside temperature, basically using a heating curve. If you want to know what a heating curve is, please look at articles like http://tech-controllers.com/blog/heating-curve---what-is-it-and-how-to-set-it<br/><br/>
+        This plugin will make domoticz act as a OpenTherm Weather Dependent Thermostate. So a heating curve will determine boiler water temperatures, to get the right amount of heating ins all rooms of your building. If you want to know what a heating curve is, please look at articles like http://tech-controllers.com/blog/heating-curve---what-is-it-and-how-to-set-it<br/><br/>
+        <h3>Why this plugin</h3>
+        My current boiler is end of life and i needed a new one. My current thermostate is already Weather Dependent, but cannot take advantage of the modulation features of a new boiler and i didn't like the limitations of all the commercial propositions of a smart weather dependent thermostate, so by creating one myself in domoticz I now have the following advantages:<br/>
+        <ul style="list-style-type:square">
+            <li>lower cost for the same functionality as my old thermostat: 30 EUR of material againt 300 EUR for a commercial system (and then i'm ignoring the fact that after initial price, some also need subscriptions)</li>
+            <li>fully opentherm, with the advantages of a modulating system (some commercial weather dependent systems only support on/off protocol)</li>
+            <li>no private data (e.g. wheter or not i am at home) in a public cloud</li>
+            <li>Full control of the boiler if set to manual</li>
+            <li>All boiler sensors available in domoticz</li>
+            <li>Domoticz timers have much more options than the ones on commerical thermostats</li>
+            <li>No need for an expensive outside temprature connected to the boiler (any temperature device in domoticz can be used, so also owm or buienradar)</li>
+            <li>Full domoticz integration, so you can make the heating part of your scenes and scripts</li>
+        </ul>
+
         <h3>Requisites</h3>
         In order to make this plugin work you need<br/>
         <ul style="list-style-type:square">
@@ -27,10 +40,10 @@
         <h3>Configuration</h3>
         Please fill the following coordinates to make this plugin work<br/>
         <ul style="list-style-type:square">
-            <li>IP adress or hostname from the Wemos D1 containing the domoticz opentherm handler</li>
-            <li>the json command to get your outside temperature temperature</li>
-            <li>the json command to get your reference room temperature, this is optional and is only needed if you want to use reference room compensation</li>
-            <li>The number of minutes the "Daytime Extension" should be active when pressed</li>
+            <li>Domticz IP adress and port (the default should work on a standard domoticz config)</li>
+            <li>IP adress or hostname from the Wemos D1 containing the domoticz opentherm handler (the default should work on a standard network config)</li>
+            <li>the IDX values of your outdoor and indoor temperature devices</li>
+            <li>The number of minutes the "Daytime Extension" button should be active when pressed</li>
         </ul>
     </description>
     <params>
@@ -38,10 +51,10 @@
         <param field="Port" label="Domoticz Port" width="40px" required="true" default="8080"/>
         <param field="Username" label="Domoticz Username" width="200px" required="false" default=""/>
         <param field="Password" label="Domoticz Password" width="200px" required="false" default=""/>
-        <param field="Mode1" label="ESP Hostname" width="200px" required="true" default="" />
-        <param field="Mode2" label="idx for outside temperature device" default="http://127.0.0.1:8080/json.htm?type=devices&amp;rid=38" width="100px" required="true" />
-        <param field="Mode3" label="idx for reference room temperature device" default="http://127.0.0.1:8080/json.htm?type=devices&amp;rid=39" width="100px" />
-        <param field="Mode4" label="Daytime Extension Time in minutes" default="120"/>
+        <param field="Mode1" label="ESP Hostname" default="domesphelper.local" width="200px" required="true" default="" />
+        <param field="Mode2" label="idx for outside temperature device" default="514" width="100px" required="true" />
+        <param field="Mode3" label="idx for reference room temperature device" default="685" width="100px" required="true" />
+        <param field="Mode4" label="Daytime Extension Time in minutes" default="120" required="true" />
     </params>
 </plugin>
 """

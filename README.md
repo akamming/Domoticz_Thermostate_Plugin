@@ -3,7 +3,7 @@ Domoticz Plugin for ESP thermostat with weather dependent heating control
 
 ## Why this plugin
 My current boiler is end of life and i needed a new one. My current thermostate is already Weather Dependent, but cannot take advantage of the modulation features of a new boiler and i didn't like the limitations of all the commercial propositions of a smart weather dependent thermostate, so by creating one myself in domoticz I now have the following advantages:
-1. lower cost for the same functionality as my old thermostat: 30 EUR of material againt 300 EUR for a commercial system (and then i'm ignoring the fact that after initial price, some also need subscriptions)
+1. lower cost for the same functionality as my old thermostat: 30 EUR of material against 300 EUR for a commercial system (and then i'm ignoring the fact that after initial price, some also need subscriptions)
 2. fully opentherm, with the advantages of a modulating system (some commercial weather dependent systems only support on/off protocol
 3. no private data (e.g. wheter or not i am at home) in a public cloud
 4. Full control of the boiler if set to manual

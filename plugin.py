@@ -74,6 +74,7 @@ REFERENCEROOMCOMPENSATION=25
 DAYTIMEEXTENSION=26
 HOLIDAY=27
 DHWCONTROL=28
+THERMOSTATTEMPERATURE=29
 
 #Global vars
 Hostname=""
@@ -139,8 +140,12 @@ def UpdateTemperatureSensor(SensorName,UnitID,Value):
         if not (UnitID in Devices):
             Debug("Creating device "+SensorName)
             Domoticz.Device(Name=SensorName, Unit=UnitID, TypeName="Temperature", Used=1).Create()
-        Devices[UnitID].Update(nValue=int(Value), sValue=str(Value))
-        Domoticz.Log("Temperature ("+Devices[UnitID].Name+")")
+        try:
+            if (float(Devices[UnitID].sValue)!=Value):
+                Devices[UnitID].Update(nValue=int(Value), sValue=str(Value))
+                Domoticz.Log("Temperature ("+Devices[UnitID].Name+")")
+        except:
+            Domoticz.Log("Error comparing values")
 
 def UpdatePressureSensor(SensorName,UnitID,Value):
        #Creating devices in case they aren't there...
@@ -157,6 +162,7 @@ def UpdateSensors(data):
     UpdateOnOffSensor("EnableCooling",ENABLECOOLING,data["EnableCooling"])
     UpdateSetpoint("BoilerSetpoint",BOILERSETPOINT,data["BoilerSetpoint"])
     UpdateSetpoint("DHWSetpoint",DHWSETPOINT,data["DHWSetpoint"])
+    UpdateTemperatureSensor("Thermostat Temperature",THERMOSTATTEMPERATURE,data["ThermostatTemperature"])
 
     #Update Sensors
     if data["OpenThermStatus"]=="OK":

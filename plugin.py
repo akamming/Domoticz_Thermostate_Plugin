@@ -3,40 +3,13 @@
 # Author: akamming
 #
 """
-<plugin key="OpenThermWDHC" name="OpenTherm Weather Dependent Heating Control" author="akamming" version="1.0.0" wikilink="http://www.domoticz.com/wiki/plugins/plugin.html" externallink="https://github.com/akamming/esp_domoticz_opentherm_handler/">
+<plugin key="OpenThermWDHC" name="OpenTherm Weather Dependent Heating Control" author="akamming" version="1.0.0" wikilink="https://github.com/akamming/Domoticz_Thermostate_Plugin#readme" externallink="https://github.com/akamming/esp_domoticz_opentherm_handler/">
     <description>
         <h2>Weather Dependent Heating Control</h2><br/>
         Use Domoticz to control your OpenTherm Boiler<br/>
         <br/>
         This plugin will make domoticz act as a OpenTherm Weather Dependent Thermostate. So a heating curve will determine boiler water temperatures, to get the right amount of heating ins all rooms of your building. If you want to know what a heating curve is, please look at articles like http://tech-controllers.com/blog/heating-curve---what-is-it-and-how-to-set-it<br/><br/>
-        <h3>Why this plugin</h3>
-        My current boiler is end of life and i needed a new one. My current thermostate is already Weather Dependent, but cannot take advantage of the modulation features of a new boiler and i didn't like the limitations of all the commercial propositions of a smart weather dependent thermostate, so by creating one myself in domoticz I now have the following advantages:<br/>
-        <ul style="list-style-type:square">
-            <li>lower cost for the same functionality as my old thermostat: 30 EUR of material againt 300 EUR for a commercial system (and then i'm ignoring the fact that after initial price, some also need subscriptions)</li>
-            <li>fully opentherm, with the advantages of a modulating system (some commercial weather dependent systems only support on/off protocol)</li>
-            <li>no private data (e.g. wheter or not i am at home) in a public cloud</li>
-            <li>Full control of the boiler if set to manual</li>
-            <li>All boiler sensors available in domoticz</li>
-            <li>Domoticz timers have much more options than the ones on commerical thermostats</li>
-            <li>No need for an expensive outside temprature connected to the boiler (any temperature device in domoticz can be used, so also owm or buienradar)</li>
-            <li>Full domoticz integration, so you can make the heating part of your scenes and scripts</li>
-        </ul>
-
-        <h3>Requisites</h3>
-        In order to make this plugin work you need<br/>
-        <ul style="list-style-type:square">
-            <li>An ESP8266 device like the Wemos D1,</li>
-            <li>which is flashed with the  domoticz helper firmware (https://github.com/akamming/esp_domoticz_opentherm_handler)</li>
-            <li>and is connected to an opentherm adapter (http://ihormelnyk.com/opentherm_adapter or https://diyless.com/product/master-opentherm-shield),</li>
-            <li>Which is connected to your OpenTherm Boiler</li>
-        </ul>
-        <h3>Features</h3>
-        <ul style="list-style-type:square">
-            <li>Read your boiler sensors</li>
-            <li>Control Heating, Cooling and Hot Water</li>
-            <li>Set DHW setpoints</li>
-            <li>Control Boiler Temperature based on outside temperature</li>
-        </ul>
+        The description on how to use this plugin, can be found on <a href="https://github.com/akamming/Domoticz_Thermostate_Plugin#readme">the github page</a><br/>
         <h3>Configuration</h3>
         Please fill the following coordinates to make this plugin work<br/>
         <ul style="list-style-type:square">
@@ -106,7 +79,7 @@ DHWCONTROL=28
 Hostname=""
 DayTimeExtensionTime=120
 Debugging=True
-#Debugging=True
+Debugging=False
 
 def getInt(s):
     try: 
@@ -332,11 +305,8 @@ def CalculateBoilerSetPoint():
                     temperaturetoreach=20
                     Compensation=0
 
-                if CurrentInsideTemperature<temperaturetoreach:
-                    Debug("Temperature below setpoint, applying reference room temperature compensation: "+str((temperaturetoreach-CurrentInsideTemperature)*Compensation))
-                    TargetTemperature+=(temperaturetoreach-CurrentInsideTemperature)*Compensation
-                else:
-                    Debug("temperature above setpoint, no reference room compensation")
+                Debug("applying reference room temperature compensation: "+str((temperaturetoreach-CurrentInsideTemperature)*Compensation))
+                TargetTemperature+=(temperaturetoreach-CurrentInsideTemperature)*Compensation
         else:
             Log("Error: Unable to get reference room termperature")
             

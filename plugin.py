@@ -32,7 +32,6 @@
 </plugin>
 """
 import Domoticz
-#from domoticz import Devices
 import requests
 import json
 import datetime
@@ -257,7 +256,8 @@ def ProcessResponse(data):
 def ESPCommand(url):
     Debug("Calling "+Hostname+url)
     try:
-        response = requests.get(Hostname+url, timeout=3)
+        #response = requests.get(Hostname+url, timeout=3)
+        response = requests.get(Hostname+url)
         if (response.status_code==200):
             Debug("Call succeeded")
             ProcessResponse(response.json())
@@ -303,12 +303,12 @@ def CalculateBoilerSetPoint():
                 Debug("Reference Room Compensation is switched on, checking if we have to compensate")
                 temperaturetoreach=0
                 #check to which target to get
-                if Devices[PROGRAMSWITCH].nValue==30:
+                if (Devices[PROGRAMSWITCH].nValue==30 and Devices[HOLIDAY].nValue==0) or Devices[DAYTIMEEXTENSION].nValue==1:
                     temperaturetoreach=Devices[DAYSETPOINT].nValue
-                elif Devices[PROGRAMSWITCH].nValue==20:
-                    temperaturetoreach=Devices[NIGHTSETPOINT].nValue
-                elif Devices[PROGRAMSWITCH].nValue==10:
+                elif Devices[PROGRAMSWITCH].nValue==10 or Devices[HOLIDAY].nValue==1:
                     temperaturetoreach=Devices[FROSTPROTECTIONSETPOINT].nValue
+                elif Devices[PROGRAMSWITCH].nValue==20: 
+                    temperaturetoreach=Devices[NIGHTSETPOINT].nValue
                 else:
                     Log("This code should not be reached, settings parameters to disable compensation")
                     temperaturetoreach=20
@@ -414,6 +414,7 @@ class BasePlugin:
             Devices[Unit].Update(nValue=int(Level), sValue=str(Level))
             if Devices[Unit].nValue==0: 
                 Debug("Switch off heating")
+                ESPCommand("SetBoilerTemp?Temperature=0")
                 ESPCommand("DisableCentralHeating")
         elif Unit in {HOLIDAY,DAYTIMEEXTENSION,DHWCONTROL}:
             NewValue=0
@@ -465,7 +466,7 @@ class BasePlugin:
                         Debug("Day time extension active ["+Devices[DAYTIMEEXTENSION].LastUpdate+"]")
                         res = datetime.datetime(*(time.strptime(Devices[DAYTIMEEXTENSION].LastUpdate, "%Y-%m-%d %H:%M:%S")[0:6]))
                         delta=(datetime.datetime.now()-res).total_seconds()
-                        Debug("button was pressed "+str(int(delta))+"seconds ago,"+str(int(DayTimeExtensionTime*60-delta))+" to switch back program again")
+                        Debug("Daytime extension was set"+str(int(delta)/60)+"minutes ago,"+str(int(DayTimeExtensionTime*60-delta))+" to switch back program again")
                         if (delta>DayTimeExtensionTime*60):
                             Log("DaytimeExtension expired, going back to normal program")
                             UpdateOnOffSensor("DayTime Extension",DAYTIMEEXTENSION,"Off")
@@ -484,8 +485,9 @@ class BasePlugin:
                         if Devices[ENABLECENTRALHEATING].nValue==0:
                             Log("Switching on the boiler")
                             ESPCommand("EnableCentralHeating")
-                        #Send command for boilertermperature
-                        ESPCommand("SetBoilerTemp?Temperature="+str(TargetTemperature))
+                        else:
+                            #Send command for boilertermperature
+                            ESPCommand("SetBoilerTemp?Temperature="+str(TargetTemperature))
                     #Manage DHW
                     if Devices[DHWCONTROL].nValue==1:
                         if  Devices[ENABLEHOTWATER].nValue==0:
@@ -509,8 +511,9 @@ class BasePlugin:
                             if Devices[ENABLECENTRALHEATING].nValue==0:
                                 Log("Enable heating on the boiler")
                                 ESPCommand("EnableCentralHeating")
-                            #Send command
-                            ESPCommand("SetBoilerTemp?Temperature="+str(TargetTemperature))
+                            else:
+                                #Send command
+                                ESPCommand("SetBoilerTemp?Temperature="+str(TargetTemperature))
                         else:
                             #above or on setpoint, Heating can be switched off
                             if Devices[ENABLECENTRALHEATING].nValue==1:
@@ -538,8 +541,9 @@ class BasePlugin:
                             if Devices[ENABLECENTRALHEATING].nValue==0:
                                 Log("Enable heating on the boiler")
                                 ESPCommand("EnableCentralHeating")
-                            #Send command
-                            ESPCommand("SetBoilerTemp?Temperature="+str(TargetTemperature))
+                            else:
+                                #Send command
+                                ESPCommand("SetBoilerTemp?Temperature="+str(TargetTemperature))
                         else:
                             #above or on setpoint, Heating can be switched off
                             if Devices[ENABLECENTRALHEATING].nValue==1:

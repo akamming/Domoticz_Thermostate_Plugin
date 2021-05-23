@@ -130,22 +130,24 @@ def UpdateSetpoint(SensorName,UnitID,Value):
         if not (UnitID in Devices):
             Debug("Creating device "+SensorName)
             Domoticz.Device(Name=SensorName, Unit=UnitID, Type=242, Subtype=1, Used=1, Image=15).Create()
-        if int(Value)!=Devices[UnitID].nValue:
-            Devices[UnitID].Update(nValue=int(Value), sValue=str(Value))
-            Domoticz.Log("Setpoint ("+Devices[UnitID].Name+")")
+        try:
+            if float(Value)!=float(Devices[UnitID].sValue):
+                Devices[UnitID].Update(nValue=int(Value), sValue=str(Value))
+                Domoticz.Log("Setpoint ("+Devices[UnitID].Name+")")
+        except:
+            Domoticz.Log("Error comparing setpoint values")
 
 def UpdateTemperatureSensor(SensorName,UnitID,Value):
-        Debug("Updating temperature sensor")
+        Debug("Updating temperature sensor ")
         #Creating devices in case they aren't there...
         if not (UnitID in Devices):
             Debug("Creating device "+SensorName)
             Domoticz.Device(Name=SensorName, Unit=UnitID, TypeName="Temperature", Used=1).Create()
         try:
-            if (float(Devices[UnitID].sValue)!=Value):
-                Devices[UnitID].Update(nValue=int(Value), sValue=str(Value))
-                Domoticz.Log("Temperature ("+Devices[UnitID].Name+")")
+            Devices[UnitID].Update(nValue=int(Value), sValue=str(Value))
+            Domoticz.Log("Temperature ("+Devices[UnitID].Name+")")
         except:
-            Domoticz.Log("Error comparing values")
+            Domoticz.Log("Error updating temperature")
 
 def UpdatePressureSensor(SensorName,UnitID,Value):
        #Creating devices in case they aren't there...
@@ -166,6 +168,7 @@ def UpdateSensors(data):
 
     #Update Sensors
     if data["OpenThermStatus"]=="OK":
+        Debug("Updating sensors")
         UpdateOnOffSensor("CentralHeating",CENTRALHEATING,data["CentralHeating"])
         UpdateOnOffSensor("HotWater",HOTWATER,data["HotWater"])
         UpdateOnOffSensor("Cooling",COOLING,data["Cooling"])
@@ -404,9 +407,14 @@ class BasePlugin:
     def onCommand(self, Unit, Command, Level, Hue):
         Debug("onCommand called for Unit " + str(Unit) + ": Parameter '" + str(Command) + "', Level: " + str(Level))
         #if Unit==in {CURVATURESWITCH or Unit==PROGRAMSWITCH:
-        if Unit in {CURVATURESWITCH,PROGRAMSWITCH,MINBOILERTEMP,MAXBOILERTEMP,BOILERTEMPATMIN10,BOILERTEMPATPLUS20,SWITCHHEATINGOFFAT,
+        if Unit in {CURVATURESWITCH,MINBOILERTEMP,MAXBOILERTEMP,BOILERTEMPATMIN10,BOILERTEMPATPLUS20,SWITCHHEATINGOFFAT,
                 DAYSETPOINT,NIGHTSETPOINT,FROSTPROTECTIONSETPOINT,REFERENCEROOMCOMPENSATION}:
             Devices[Unit].Update(nValue=int(Level), sValue=str(Level))
+        elif Unit==PROGRAMSWITCH:
+            Devices[Unit].Update(nValue=int(Level), sValue=str(Level))
+            if Devices[Unit].nValue==0: 
+                Debug("Switch off heating")
+                ESPCommand("DisableCentralHeating")
         elif Unit in {HOLIDAY,DAYTIMEEXTENSION,DHWCONTROL}:
             NewValue=0
             if Command=="On":

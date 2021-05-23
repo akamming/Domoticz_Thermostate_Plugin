@@ -516,7 +516,9 @@ class BasePlugin:
                             if Devices[ENABLECENTRALHEATING].nValue==1:
                                 Log("Disable heating on the boiler")
                                 ESPCommand("DisableCentralHeating")
-                            ESPCommand("GetSensors")
+                            else:
+                                Debug("Setting boiler temp to 0")
+                                ESPCommand("SetBoilerTemp?Temperature=0") 
                     else:
                         Debug("Unable to execute Frost Protection program, no inside temperature")
                 elif Devices[PROGRAMSWITCH].nValue==20:
@@ -543,7 +545,9 @@ class BasePlugin:
                             if Devices[ENABLECENTRALHEATING].nValue==1:
                                 Log("Disable heating on the boiler")
                                 ESPCommand("DisableCentralHeating")
-                            ESPCommand("GetSensors")
+                            else:
+                                Debug("Setting boiler temp to 0")
+                                ESPCommand("SetBoilerTemp?Temperature=0")
                     else:
                         Debug("Unable to execute night program, no inside temperature")
                     

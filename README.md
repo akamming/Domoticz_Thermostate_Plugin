@@ -29,20 +29,19 @@ My current boiler is end of life and i needed a new one. My current thermostate 
     - connect with a device to WiFi Access Point "Thermostat"
     - browser to http://192.168.4.1 
     - follow instructions to connect the ESP to correct WiFi network
-5. Log into your router and make sure the Wemos gets a static ip adress
-6. install this plugin into domoticz by     
+5. install this plugin into domoticz by     
    - cd <your domoticzdir>/plugins
    - git clone https://github.com/akamming/Domoticz_Thermostate_Plugin
    - restart domoticz
    - go to hardware page. The plugin (Weather Dependent Heating Control) should now be visible in the "Type" dropdown
- 7. select the plugin, and enter the following config:
+6. select the plugin, and enter the following config:
     - the hostname/ipadress and port of domoticz (mandatory, default works with standard domoticz installation), 
     - option username/password for domoticz (mandatory, in standard domoticz install, you can leave this empty) 
     - the  hostname / ip adres of your Wemos  (mandatory, in standard network config, domoticz can find the ESP using the default setting)
     - the IDX of the domoticz device which measures the outdoor temperature (mandatory)
     - idx IDX of the domoticz device which measures temperature in the reference room (mandatory)) 
     - and a duration for the "Daytime Extensions" button in minutes 
- 8. Click "add"
+7. Click "add"
  
 If all works well, several devices should have been added to the devices tab and you are now ready to use the plugin!
 ![image](https://user-images.githubusercontent.com/30364409/118498856-b8ae4100-b726-11eb-8a57-1d12cbe4ae94.png)

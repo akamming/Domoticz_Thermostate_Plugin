@@ -74,12 +74,14 @@ DAYTIMEEXTENSION=26
 HOLIDAY=27
 DHWCONTROL=28
 THERMOSTATTEMPERATURE=29
+FAULT=30
+DIAGNOSTIC=31
 
 #Global vars
 Hostname=""
 DayTimeExtensionTime=120
 Debugging=True
-#Debugging=False
+ebugging=False
 
 def getInt(s):
     try: 
@@ -118,7 +120,7 @@ def UpdateOnOffSensor(SensorName,UnitID,Value):
             Debug("Creating device "+SensorName)
             Domoticz.Device(Name=SensorName, Unit=UnitID, TypeName="Switch", Used=1).Create()
         newValue=0
-        if (Value.lower()=="on"):
+        if (Value.lower()=="on" or Value.lower()=="yes"):
             newValue=1
         if newValue!=Devices[UnitID].nValue:
             Devices[UnitID].Update(nValue=newValue, sValue=str(Value))
@@ -171,6 +173,8 @@ def UpdateSensors(data):
         UpdateOnOffSensor("HotWater",HOTWATER,data["HotWater"])
         UpdateOnOffSensor("Cooling",COOLING,data["Cooling"])
         UpdateOnOffSensor("Flame",FLAME,data["Flame"])
+        UpdateOnOffSensor("Fault",FAULT,data["Fault"])
+        UpdateOnOffSensor("Diagnostic",DIAGNOSTIC,data["Diagnostic"])
         UpdateTemperatureSensor("BoilerTemperature",BOILERTEMPERATURE,data["BoilerTemperature"])
         UpdateTemperatureSensor("DHWTemperature",DHWTEMPERATURE,data["DhwTemperature"])
         UpdateTemperatureSensor("ReturnTemperature",RETURNTEMPERATURE,data["ReturnTemperature"])

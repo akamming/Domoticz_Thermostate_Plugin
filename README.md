@@ -110,8 +110,8 @@ Wheter your home heating will be comfortable without generating too much gas use
     - try to decrease the reference room temperature compensation setting (until you start loosing comfort)
 
 ## Contributions
-If would you like to build extra features in this plugin, feel free to do so, just as long as you make PR's, so other users can benefit from your contributions as well
+If you would like to build extra features in this plugin, feel free to do so, just as long as you make PR's, so other users can benefit from your contributions as well
 
 ## Testing
-At the moment of writing my opentherm interface was not yet delivered, so everything is tested, but stubbed and i am still waiting to test again a real boiler ;-)
+At the moment of writing my opentherm interface was  just delivered, so everything is tested, but but just for a few days against a real boiler, doing up experience right now ;-)
 

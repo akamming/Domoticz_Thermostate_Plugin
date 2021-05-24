@@ -42,7 +42,7 @@ import base64
 
 
 #Constants
-RequiredInterface=1
+RequiredInterface=2
 
 #UnitID's
 ENABLECENTRALHEATING=1
@@ -130,9 +130,8 @@ def UpdateSetpoint(SensorName,UnitID,Value):
             Debug("Creating device "+SensorName)
             Domoticz.Device(Name=SensorName, Unit=UnitID, Type=242, Subtype=1, Used=1, Image=15).Create()
         try:
-            if float(Value)!=float(Devices[UnitID].sValue):
-                Devices[UnitID].Update(nValue=int(Value), sValue=str(Value))
-                Domoticz.Log("Setpoint ("+Devices[UnitID].Name+")")
+            Devices[UnitID].Update(nValue=int(Value), sValue=str(Value))
+            Domoticz.Log("Setpoint ("+Devices[UnitID].Name+")")
         except:
             Domoticz.Log("Error comparing setpoint values")
 
@@ -279,7 +278,7 @@ def CalculateBoilerSetPoint():
     
     if not Succes:
         Debug("Failed to get calculate Target temperature")
-        return False,Null,Null,Null
+        return False,None,None,None 
 
     if Succes:
         if (CurrentOutsideTemperature>20):
@@ -363,7 +362,7 @@ def GetTemperature(TemperatureDeviceIDX):
         return True,CurrentTemperature
     except:
         #Domoticz Error
-        Log("domoticz error getting temperature "+response.status_code+" : "+response.text+", unable to execute program")
+        Log("error getting temperature from domoticz device with idx"+str(TemperatureDeviceIDX))
         return False,0
 
 class BasePlugin:
@@ -414,8 +413,7 @@ class BasePlugin:
             Devices[Unit].Update(nValue=int(Level), sValue=str(Level))
             if Devices[Unit].nValue==0: 
                 Debug("Switch off heating")
-                ESPCommand("SetBoilerTemp?Temperature=0")
-                ESPCommand("DisableCentralHeating")
+                ESPCommand("command?BoilerTemperature=0&CentralHeating=off")
         elif Unit in {HOLIDAY,DAYTIMEEXTENSION,DHWCONTROL}:
             NewValue=0
             if Command=="On":
@@ -423,23 +421,23 @@ class BasePlugin:
             Devices[Unit].Update(nValue=NewValue, sValue=Command)
         elif Unit==ENABLECENTRALHEATING:
             if Command.lower()=="on":
-                ESPCommand("EnableCentralHeating")
+                ESPCommand("command?CentralHeating=on")
             else:
-                ESPCommand("DisableCentralHeating")
+                ESPCommand("command?CentralHeating=off")
         elif Unit==ENABLEHOTWATER:
             if Command.lower()=="on":
-                ESPCommand("EnableHotWater")
+                ESPCommand("command?HotWater=on")
             else:
-                ESPCommand("DisableHotWater")
+                ESPCommand("command?HotWater=off")
         elif Unit==ENABLECOOLING:
             if Command.lower()=="on":
-                ESPCommand("EnableCooling")
+                ESPCommand("command?Cooling=on")
             else:
-                ESPCommand("DisableCooling")
+                ESPCommand("command?Cooling=off")
         elif Unit==BOILERSETPOINT:
-            ESPCommand("SetBoilerTemp?Temperature="+str(Level))
+            ESPCommand("command?BoilerTemperature="+str(Level))
         elif Unit==DHWSETPOINT:
-            ESPCommand("SetDHWTemp?Temperature="+str(Level))
+            ESPCommand("command?DHWTemperature?Temperature="+str(Level))
         else: 
             Debug("Unhandle command")
 
@@ -475,24 +473,16 @@ class BasePlugin:
                     if CurrentOutsideTemperature>(Devices[SWITCHHEATINGOFFAT].nValue):
                         Debug("Temp aboven day treshold")
                         #We are at the temperature at which we can switchoff heating
-                        if Devices[ENABLECENTRALHEATING].nValue==1:
-                            Log("Above temperature treshold, switching off boiler")
-                            ESPCommand("DisableCentralHeating")
-                        else:
-                            ESPCommand("GetSensors")
+                        ESPCommand("command?CentralHeating=off&BoilerTemperature=0")
                     else:
-                        #Make sure central heating is switched on
-                        if Devices[ENABLECENTRALHEATING].nValue==0:
-                            Log("Switching on the boiler")
-                            ESPCommand("EnableCentralHeating")
-                        else:
-                            #Send command for boilertermperature
-                            ESPCommand("SetBoilerTemp?Temperature="+str(TargetTemperature))
+                        #we are below temperature, so switch on heating with correct temperature
+                        ESPCommand("command?CentralHeating=on&BoilerTemperature="+str(TargetTemperature))
                     #Manage DHW
                     if Devices[DHWCONTROL].nValue==1:
                         if  Devices[ENABLEHOTWATER].nValue==0:
                             Log("Switching on DHW")
-                            ESPCommand("EnableHotWater")
+                            ESPCommand("command?HotWater=on")
+
                 elif Devices[PROGRAMSWITCH].nValue==10 or Devices[HOLIDAY].nValue==1:
                     if Devices[HOLIDAY].nValue==1:
                         Debug("Holiday program active")
@@ -501,27 +491,16 @@ class BasePlugin:
                     if Devices[DHWCONTROL].nValue==1:
                         if  Devices[ENABLEHOTWATER].nValue==1:
                             Log("Switching off DHW")
-                            ESPCommand("DisableHotWater")
+                            ESPCommand("command?HotWater=off")
                     #Manage Heating
                     if CurrentInsideTemperature:
                         Debug("Current inside temperature = "+str(CurrentInsideTemperature))
                         if CurrentInsideTemperature<Devices[FROSTPROTECTIONSETPOINT].nValue:
                             #temperature too low, make there is heating
-                            #Check if we have to enable the central heating
-                            if Devices[ENABLECENTRALHEATING].nValue==0:
-                                Log("Enable heating on the boiler")
-                                ESPCommand("EnableCentralHeating")
-                            else:
-                                #Send command
-                                ESPCommand("SetBoilerTemp?Temperature="+str(TargetTemperature))
+                            ESPCommand("command?CentralHeating=on&BoilerTemperature="+str(TargetTemperature))
                         else:
-                            #above or on setpoint, Heating can be switched off
-                            if Devices[ENABLECENTRALHEATING].nValue==1:
-                                Log("Disable heating on the boiler")
-                                ESPCommand("DisableCentralHeating")
-                            else:
-                                Debug("Setting boiler temp to 0")
-                                ESPCommand("SetBoilerTemp?Temperature=0") 
+                            #temperature above setpoint, switch off heating
+                            ESPCommand("command?CentralHeating=off&BoilerTemperature=0")
                     else:
                         Debug("Unable to execute Frost Protection program, no inside temperature")
                 elif Devices[PROGRAMSWITCH].nValue==20:
@@ -530,7 +509,7 @@ class BasePlugin:
                     if Devices[DHWCONTROL].nValue==1:
                         if  Devices[ENABLEHOTWATER].nValue==1:
                             Log("Switching off DHW")
-                            ESPCommand("DisableHotWater")
+                            ESPCommand("command?HotWater=off")
                     #Manage Heating
                     Succes,CurrentInsideTemperature=GetTemperature(Parameters["Mode3"])
                     if CurrentInsideTemperature:
@@ -538,20 +517,9 @@ class BasePlugin:
                         if CurrentInsideTemperature<Devices[NIGHTSETPOINT].nValue:
                             #temperature too low, make there is heating
                             #Check if we have to enable the central heating
-                            if Devices[ENABLECENTRALHEATING].nValue==0:
-                                Log("Enable heating on the boiler")
-                                ESPCommand("EnableCentralHeating")
-                            else:
-                                #Send command
-                                ESPCommand("SetBoilerTemp?Temperature="+str(TargetTemperature))
+                            ESPCommand("command?CentralHeating=on&BoilerTemperature="+str(TargetTemperature))
                         else:
-                            #above or on setpoint, Heating can be switched off
-                            if Devices[ENABLECENTRALHEATING].nValue==1:
-                                Log("Disable heating on the boiler")
-                                ESPCommand("DisableCentralHeating")
-                            else:
-                                Debug("Setting boiler temp to 0")
-                                ESPCommand("SetBoilerTemp?Temperature=0")
+                            ESPCommand("command?CentralHeating=off&BoilerTemperature=0")
                     else:
                         Debug("Unable to execute night program, no inside temperature")
                     

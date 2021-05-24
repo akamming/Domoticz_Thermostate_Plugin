@@ -79,7 +79,7 @@ THERMOSTATTEMPERATURE=29
 Hostname=""
 DayTimeExtensionTime=120
 Debugging=True
-Debugging=False
+#Debugging=False
 
 def getInt(s):
     try: 
@@ -238,8 +238,8 @@ def CreateParameters():
 def ProcessResponse(data):
     Debug("ProcessResponse()")
     ifversion=0;
-    #for x in data:
-    #    Debug("Value "+x+" is "+str(data[x]))
+    for x in data:
+        Debug("Value "+x+" is "+str(data[x]))
     try:
         ifversion=data["InterfaceVersion"]
     except:
@@ -249,7 +249,7 @@ def ProcessResponse(data):
         Debug("We have the correct interface")
         UpdateSensors(data)
     else:
-        Log("Error Interace version "+RequiredInterface+" required, make sure you have latest plugin and firmware")
+        Log("Error Interace version "+str(RequiredInterface)+" required, make sure you have latest plugin and firmware")
 
 
 

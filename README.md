@@ -14,7 +14,7 @@ My current boiler is end of life and i needed a new one. My current thermostate 
 
 ## Prerequisites
 1. A wemos D1 with domoticz opentherm handler firmware (https://github.com/akamming/esp_domoticz_opentherm_handler)
-2. Connected to an opentherm adatper (like http://ihormelnyk.com/opentherm_adapter)
+2. Connected to an opentherm adapter (like http://ihormelnyk.com/opentherm_adapter)
 3. which is connected to an opentherm compatible Boiler
 4. A working domoticz installation with at least and make sure you know the IDX numbers of 
     - a working temperature device for measuring the outside temperature

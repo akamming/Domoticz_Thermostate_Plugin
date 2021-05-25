@@ -10,45 +10,40 @@ My current boiler is end of life and i needed a new one. My current thermostate 
 5. All boiler sensors available in domoticz and the ability to send notification (e.g. on low water pressure)
 6. Domoticz timers have much more options than the ones on commerical thermostats
 7. No need for an expensive (also 100+ EUR) outside temperature connected to the boiler (any temperature device in domoticz can be used, so also owm or buienradar)
-8. Full domoticz integration, so you heating can part of scenes, scripts and other events
+8. Full domoticz integration, so heating can be  part of scenes, scripts and other events
 
 ## Prerequisites
-1. A wemos D1 with domototicz opentherm handler firmware (https://github.com/akamming/esp_domoticz_opentherm_handler)
-2. Connected to an opentherm adatper (like http://ihormelnyk.com/opentherm_adapter)
+1. A wemos D1 with domoticz opentherm handler firmware (https://github.com/akamming/esp_domoticz_opentherm_handler)
+2. Connected to an opentherm adapter (like http://ihormelnyk.com/opentherm_adapter)
 3. which is connected to an opentherm compatible Boiler
 4. A working domoticz installation with at least and make sure you know the IDX numbers of 
     - a working temperature device for measuring the outside temperature
     - a working temperature device for measuring the inside temperature in 1 room (the "reference room")
 
 ## installation
-1. Install arduino software
-2. install additional libraries: 
-    - Opentherm library tzapu ihormelyk (for communication with boiler)
-    - Wifimanager by tzypu (for user friendly 
-3. Install the opentherm handler firmware 
-4. Connect the Wemos D1 to the opentherm adapter on pin 2 and 3
-5. Connect the opentherm adapter to the boiler 
-6. Prepare the Wemos D1 by 
+1. Install the custom firmware on Wemos D1, using instructions here (https://github.com/akamming/esp_domoticz_opentherm_handler) 
+2. Connect the Wemos D1 to the opentherm adapter on pin 2 and 3
+3. Connect the opentherm adapter to the boiler 
+4. Prepare the Wemos D1 by 
     - powering on the device
     - connect with a device to WiFi Access Point "Thermostat"
     - browser to http://192.168.4.1 
     - follow instructions to connect the ESP to correct WiFi network
-7. Connect to Access Point "Thermostat" and follow the instructions to connect the wemos to your wifi connection
-8. Log into your router and make sure the Wemos gets a static ip adress
-9. install this plugin into domoticz by     
+5. install this plugin into domoticz by     
    - cd <your domoticzdir>/plugins
    - git clone https://github.com/akamming/Domoticz_Thermostate_Plugin
    - restart domoticz
    - go to hardware page. The plugin (Weather Dependent Heating Control) should now be visible in the "Type" dropdown
- 10. select the plugin, and enter the following config:
+6. select the plugin, and enter the following config:
     - the hostname/ipadress and port of domoticz (mandatory, default works with standard domoticz installation), 
     - option username/password for domoticz (mandatory, in standard domoticz install, you can leave this empty) 
     - the  hostname / ip adres of your Wemos  (mandatory, in standard network config, domoticz can find the ESP using the default setting)
     - the IDX of the domoticz device which measures the outdoor temperature (mandatory)
     - idx IDX of the domoticz device which measures temperature in the reference room (mandatory)) 
     - and a duration for the "Daytime Extensions" button in minutes 
- 11. Click "add"
- 12. If all works well, several devices should have been added to the devices tab and you are now ready to use the plugin!
+7. Click "add"
+ 
+If all works well, several devices should have been added to the devices tab and you are now ready to use the plugin!
 ![image](https://user-images.githubusercontent.com/30364409/118498856-b8ae4100-b726-11eb-8a57-1d12cbe4ae94.png)
 
 ## How to use the plugin
@@ -110,8 +105,8 @@ Wheter your home heating will be comfortable without generating too much gas use
     - try to decrease the reference room temperature compensation setting (until you start loosing comfort)
 
 ## Contributions
-If would you like to build extra features in this plugin, feel free to do so, just as long as you make PR's, so other users can benefit from your contributions as well
+If you would like to build extra features in this plugin, feel free to do so, just as long as you make PR's, so other users can benefit from your contributions as well
 
 ## Testing
-At the moment of writing my opentherm interface was not yet delivered, so everything is tested, but stubbed and i am still waiting to test again a real boiler ;-)
+At the moment of writing my opentherm interface was  just delivered, so everything is tested, but but just for a few days against a real boiler, doing up experience right now ;-)
 

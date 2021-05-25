@@ -39,7 +39,7 @@ import time
 import urllib.parse as parse
 import urllib.request as request
 import base64 
-
+import math
 
 #Constants
 RequiredInterface=2
@@ -80,8 +80,8 @@ DIAGNOSTIC=31
 #Global vars
 Hostname=""
 DayTimeExtensionTime=120
-Debugging=True
-ebugging=False
+Debugging=False
+#Debugging=False
 
 def getInt(s):
     try: 
@@ -241,8 +241,8 @@ def CreateParameters():
 def ProcessResponse(data):
     Debug("ProcessResponse()")
     ifversion=0;
-    for x in data:
-        Debug("Value "+x+" is "+str(data[x]))
+    #for x in data:
+     #   Debug("Value "+x+" is "+str(data[x]))
     try:
         ifversion=data["InterfaceVersion"]
     except:
@@ -285,18 +285,22 @@ def CalculateBoilerSetPoint():
         return False,None,None,None 
 
     if Succes:
-        if (CurrentOutsideTemperature>20):
-            #when above 20 degrees, use minimum termpature from heating curve
-            TargetTemperature=Devices[BOILERTEMPATPLUS20].nValue
-            Debug("Outside temperature above bottom of Heating Curve, setting to lowest point: "+str(Devices[BOILERTEMPATPLUS20].nValue))
-        else:
-            Curvature=Devices[CURVATURESWITCH].nValue/10+1
-            MaxYDelta=Devices[BOILERTEMPATMIN10].nValue-Devices[BOILERTEMPATPLUS20].nValue #boilertemp at -10 minus boilertemp at +20
-            MaxXDelta=30 # 20 - (-10)=30
-            MaxToReach=MaxYDelta**Curvature
-            TargetTemperature=((20-CurrentOutsideTemperature)/MaxXDelta*(MaxToReach))**(1/Curvature)+Devices[BOILERTEMPATPLUS20].nValue
-        Debug("Calculated temperature according to heating curve: "+str(TargetTemperature))
-        
+        MaxYDelta=Devices[BOILERTEMPATMIN10].nValue-Devices[BOILERTEMPATPLUS20].nValue #boilertemp at -10 minus boilertemp at +20
+        MaxXDelta=30 # 20 - (-10)=30
+
+        #Calculate based on root function
+        #Curvature=Devices[CURVATURESWITCH].nValue/20+1
+        #MaxToReach=MaxYDelta**Curvature
+        #TargetTemperature=((20-CurrentOutsideTemperature)/MaxXDelta*(MaxToReach))**(1/Curvature)+Devices[BOILERTEMPATPLUS20].nValue
+        #Debug("Calculated temperature according to heating curve: "+str(TargetTemperature))
+
+        #Calculation based on sine curve
+        TargetTemperatureWithoutCurvature=(20-CurrentOutsideTemperature)/MaxXDelta*MaxYDelta+Devices[BOILERTEMPATPLUS20].nValue
+        Curvature=math.sin(math.pi*(20-CurrentOutsideTemperature)/MaxXDelta)*Devices[CURVATURESWITCH].nValue*MaxYDelta/100
+        TargetTemperature+=Curvature+TargetTemperatureWithoutCurvature
+        Debug("TargetTemperature = "+str(TargetTemperatureWithoutCurvature)+" + "+str(Curvature)+" = "+str(TargetTemperature))
+
+        #Apply reference room compensation
         Succes,CurrentInsideTemperature=GetTemperature(Parameters["Mode3"])
         if Succes:
             #Perform reference room compensation if 
@@ -313,7 +317,7 @@ def CalculateBoilerSetPoint():
                 elif Devices[PROGRAMSWITCH].nValue==20: 
                     temperaturetoreach=Devices[NIGHTSETPOINT].nValue
                 else:
-                    Log("This code should not be reached, settings parameters to disable compensation")
+                    Log("ERROR: This code should not be reached, settings parameters to disable compensation")
                     temperaturetoreach=20
                     Compensation=0
 
@@ -322,16 +326,15 @@ def CalculateBoilerSetPoint():
         else:
             Log("Error: Unable to get reference room termperature")
             
-        #Checking max parameters
+        # Make sure target temp remains within set boundaries
         if TargetTemperature>Devices[MAXBOILERTEMP].nValue:
             Debug("Calculated temp above max temp, correcting")
             TargetTemperature=Devices[MAXBOILERTEMP].nValue
-
-        #Checking mn parameters
         if TargetTemperature<Devices[MINBOILERTEMP].nValue:
             Debug("Calculated temp below min temp, correcting")
             TargetTemperature=Devices[MINBOILERTEMP].nValue
 
+        #Return values
         return True,TargetTemperature,CurrentOutsideTemperature,CurrentInsideTemperature
 
 def DomoticzAPI(APICall):

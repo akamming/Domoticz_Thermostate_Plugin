@@ -76,6 +76,7 @@ DHWCONTROL=28
 THERMOSTATTEMPERATURE=29
 FAULT=30
 DIAGNOSTIC=31
+FAULTCODE=32
 
 #Global vars
 Hostname=""
@@ -104,7 +105,7 @@ def UpdateCustomSensor(SensorName,UnitID,Value):
             Debug("Creating device "+SensorName)
             Domoticz.Device(Name=SensorName, Unit=UnitID, TypeName="Custom", Used=1).Create()
         Devices[UnitID].Update(nValue=0, sValue=str(Value))
-        Domoticz.Log("Counter ("+Devices[UnitID].Name+")")
+        Domoticz.Log("Custom ("+Devices[UnitID].Name+")")
 
 def UpdatePercentageSensor(SensorName,UnitID,Value):
         #Creating devices in case they aren't there...
@@ -180,6 +181,7 @@ def UpdateSensors(data):
         UpdateTemperatureSensor("ReturnTemperature",RETURNTEMPERATURE,data["ReturnTemperature"])
         UpdatePressureSensor("Pressure",PRESSURE,data["Pressure"]) 
         UpdatePercentageSensor("Modulation",MODULATION,data["Modulation"])
+        UpdateCustomSensor("FaultCode",FAULTCODE,data["FaultCode"])
     else:
         Log("Communication Error between ESP and Boiler: "+data["OpenThermStatus"])
 

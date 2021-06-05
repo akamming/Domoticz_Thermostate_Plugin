@@ -81,7 +81,7 @@ FAULTCODE=32
 #Global vars
 Hostname=""
 DayTimeExtensionTime=120
-Debugging=False
+Debugging=True
 #Debugging=False
 
 def getInt(s):
@@ -446,7 +446,7 @@ class BasePlugin:
         elif Unit==BOILERSETPOINT:
             ESPCommand("command?BoilerTemperature="+str(Level))
         elif Unit==DHWSETPOINT:
-            ESPCommand("command?DHWTemperature?Temperature="+str(Level))
+            ESPCommand("command?DHWTemperature="+str(Level))
         else: 
             Debug("Unhandle command")
 

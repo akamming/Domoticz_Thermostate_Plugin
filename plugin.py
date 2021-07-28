@@ -77,6 +77,8 @@ THERMOSTATTEMPERATURE=29
 FAULT=30
 DIAGNOSTIC=31
 FAULTCODE=32
+DHWFLOW=33
+OUTSIDETEMPERATURE=34
 
 #Global vars
 Hostname=""
@@ -179,6 +181,7 @@ def UpdateSensors(data):
         UpdateTemperatureSensor("BoilerTemperature",BOILERTEMPERATURE,data["BoilerTemperature"])
         UpdateTemperatureSensor("DHWTemperature",DHWTEMPERATURE,data["DhwTemperature"])
         UpdateTemperatureSensor("ReturnTemperature",RETURNTEMPERATURE,data["ReturnTemperature"])
+        UpdateTemperatureSensor("OutsideTemperature",OUTSIDETEMPERATURE,data["OutsideTemperature"])
         UpdatePressureSensor("Pressure",PRESSURE,data["Pressure"]) 
         UpdatePercentageSensor("Modulation",MODULATION,data["Modulation"])
         UpdateCustomSensor("FaultCode",FAULTCODE,data["FaultCode"])

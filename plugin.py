@@ -79,12 +79,21 @@ DIAGNOSTIC=31
 FAULTCODE=32
 DHWFLOW=33
 OUTSIDETEMPERATURE=34
+FPWD=35
 
 #Global vars
 Hostname=""
 DayTimeExtensionTime=120
 Debugging=True
 #Debugging=False
+
+#Vars for thermostat function
+LastInsideTemperatureValue=0 #Remember last temp to calc difference
+LastInsideTemperatureTimestamp=0
+
+ierr = 0 #Remember Integral Error
+
+
 
 def getInt(s):
     try: 
@@ -242,6 +251,7 @@ def CreateParameters():
     CreateOnOffSwitch("DayTimeExtension",DAYTIMEEXTENSION)
     CreateOnOffSwitch("Holiday",HOLIDAY)
     CreateOnOffSwitch("DHW controlled by program",DHWCONTROL)
+    CreateOnOffSwitch("FirePlace/Weather Dependent Control",FPWD)
 
 def ProcessResponse(data):
     Debug("ProcessResponse()")
@@ -279,6 +289,9 @@ def getSensors():
     ESPCommand("GetSensors")
 
 def CalculateBoilerSetPoint():
+    global LastInsideTemperatureValue
+    global LastInsideTemperatureTimestamp
+
     #Calculate temperature
     TargetTemperature=0
     Debug("Calculating Target Temperature")
@@ -286,61 +299,97 @@ def CalculateBoilerSetPoint():
     Succes,CurrentOutsideTemperature=GetTemperature(Parameters["Mode2"])
     
     if not Succes:
-        Debug("Failed to get calculate Target temperature")
+        Debug("Failed to get outside temperature")
         return False,None,None,None 
-
     if Succes:
-        MaxYDelta=Devices[BOILERTEMPATMIN10].nValue-Devices[BOILERTEMPATPLUS20].nValue #boilertemp at -10 minus boilertemp at +20
-        MaxXDelta=30 # 20 - (-10)=30
-
-        #Calculate based on root function
-        #Curvature=Devices[CURVATURESWITCH].nValue/20+1
-        #MaxToReach=MaxYDelta**Curvature
-        #TargetTemperature=((20-CurrentOutsideTemperature)/MaxXDelta*(MaxToReach))**(1/Curvature)+Devices[BOILERTEMPATPLUS20].nValue
-        #Debug("Calculated temperature according to heating curve: "+str(TargetTemperature))
-
-        #Calculation based on sine curve
-        TargetTemperatureWithoutCurvature=(20-CurrentOutsideTemperature)/MaxXDelta*MaxYDelta+Devices[BOILERTEMPATPLUS20].nValue
-        Curvature=math.sin(math.pi*(20-CurrentOutsideTemperature)/MaxXDelta)*Devices[CURVATURESWITCH].nValue*MaxYDelta/100
-        TargetTemperature+=Curvature+TargetTemperatureWithoutCurvature
-        Debug("TargetTemperature = "+str(TargetTemperatureWithoutCurvature)+" + "+str(Curvature)+" = "+str(TargetTemperature))
-
-        #Apply reference room compensation
-        Succes,CurrentInsideTemperature=GetTemperature(Parameters["Mode3"])
-        if Succes:
-            #Perform reference room compensation if 
-            Debug("Checking for room temperature compensation")
-            Compensation=Devices[REFERENCEROOMCOMPENSATION].nValue
-            if Compensation>0:
-                Debug("Reference Room Compensation is switched on, checking if we have to compensate")
-                temperaturetoreach=0
-                #check to which target to get
-                if (Devices[PROGRAMSWITCH].nValue==30 and Devices[HOLIDAY].nValue==0) or Devices[DAYTIMEEXTENSION].nValue==1:
-                    temperaturetoreach=Devices[DAYSETPOINT].nValue
-                elif Devices[PROGRAMSWITCH].nValue==10 or Devices[HOLIDAY].nValue==1:
-                    temperaturetoreach=Devices[FROSTPROTECTIONSETPOINT].nValue
-                elif Devices[PROGRAMSWITCH].nValue==20: 
-                    temperaturetoreach=Devices[NIGHTSETPOINT].nValue
-                else:
-                    Log("ERROR: This code should not be reached, settings parameters to disable compensation")
-                    temperaturetoreach=20
-                    Compensation=0
-
-                Debug("applying reference room temperature compensation: "+str((temperaturetoreach-CurrentInsideTemperature)*Compensation))
-                TargetTemperature+=(temperaturetoreach-CurrentInsideTemperature)*Compensation
-        else:
-            Log("Error: Unable to get reference room termperature")
+        #Check if we are in thermostat or Weather dependent mode
+        if Devices[FPWD].nValue==0:
+            Debug("Thermostat mode")
+            temperaturetoreach=0
+            #check to which target to get
+            if (Devices[PROGRAMSWITCH].nValue==30 and Devices[HOLIDAY].nValue==0) or Devices[DAYTIMEEXTENSION].nValue==1:
+                temperaturetoreach=Devices[DAYSETPOINT].nValue
+            elif Devices[PROGRAMSWITCH].nValue==10 or Devices[HOLIDAY].nValue==1:
+                temperaturetoreach=Devices[FROSTPROTECTIONSETPOINT].nValue
+            elif Devices[PROGRAMSWITCH].nValue==20: 
+                temperaturetoreach=Devices[NIGHTSETPOINT].nValue
+            else:
+                Log("ERROR: This code should not be reached, settings parameters to disable compensation")
+                return False,None,None,None
             
-        # Make sure target temp remains within set boundaries
-        if TargetTemperature>Devices[MAXBOILERTEMP].nValue:
-            Debug("Calculated temp above max temp, correcting")
-            TargetTemperature=Devices[MAXBOILERTEMP].nValue
-        if TargetTemperature<Devices[MINBOILERTEMP].nValue:
-            Debug("Calculated temp below min temp, correcting")
-            TargetTemperature=Devices[MINBOILERTEMP].nValue
+            #Get current temp
+            Succes,CurrentInsideTemperature=GetTemperature(Parameters["Mode3"])
+            if Succes:
+                Duration=time.time()-LastInsideTemperatureTimestamp
+                Debug("Duration = "+str(Duration))
+                Debug("Temperature to reach = "+str(temperaturetoreach))
+                TargetTemperature =  GetPidValue(temperaturetoreach, CurrentInsideTemperature, LastInsideTemperatureValue, Duration)
 
-        #Return values
-        return True,TargetTemperature,CurrentOutsideTemperature,CurrentInsideTemperature
+                #remember current temp
+                LastInsideTemperatureValue=CurrentInsideTemperature
+                LastInsideTemperatureTimestamp=time.time()
+
+                #Return Correct Values
+                return True,TargetTemperature,CurrentOutsideTemperature,CurrentInsideTemperature
+            else:
+                Log("Could not get inside temperature")
+                return False,None,None,None
+
+            return False,None,None,None
+        else:
+            Debug("Weather dependant mode")
+
+            MaxYDelta=Devices[BOILERTEMPATMIN10].nValue-Devices[BOILERTEMPATPLUS20].nValue #boilertemp at -10 minus boilertemp at +20
+            MaxXDelta=30 # 20 - (-10)=30
+
+            #Calculate based on root function
+            #Curvature=Devices[CURVATURESWITCH].nValue/20+1
+            #MaxToReach=MaxYDelta**Curvature
+            #TargetTemperature=((20-CurrentOutsideTemperature)/MaxXDelta*(MaxToReach))**(1/Curvature)+Devices[BOILERTEMPATPLUS20].nValue
+            #Debug("Calculated temperature according to heating curve: "+str(TargetTemperature))
+
+            #Calculation based on sine curve
+            TargetTemperatureWithoutCurvature=(20-CurrentOutsideTemperature)/MaxXDelta*MaxYDelta+Devices[BOILERTEMPATPLUS20].nValue
+            Curvature=math.sin(math.pi*(20-CurrentOutsideTemperature)/MaxXDelta)*Devices[CURVATURESWITCH].nValue*MaxYDelta/100
+            TargetTemperature+=Curvature+TargetTemperatureWithoutCurvature
+            Debug("TargetTemperature = "+str(TargetTemperatureWithoutCurvature)+" + "+str(Curvature)+" = "+str(TargetTemperature))
+
+            #Apply reference room compensation
+            Succes,CurrentInsideTemperature=GetTemperature(Parameters["Mode3"])
+            if Succes:
+                #Perform reference room compensation if 
+                Debug("Checking for room temperature compensation")
+                Compensation=Devices[REFERENCEROOMCOMPENSATION].nValue
+                if Compensation>0:
+                    Debug("Reference Room Compensation is switched on, checking if we have to compensate")
+                    temperaturetoreach=0
+                    #check to which target to get
+                    if (Devices[PROGRAMSWITCH].nValue==30 and Devices[HOLIDAY].nValue==0) or Devices[DAYTIMEEXTENSION].nValue==1:
+                        temperaturetoreach=Devices[DAYSETPOINT].nValue
+                    elif Devices[PROGRAMSWITCH].nValue==10 or Devices[HOLIDAY].nValue==1:
+                        temperaturetoreach=Devices[FROSTPROTECTIONSETPOINT].nValue
+                    elif Devices[PROGRAMSWITCH].nValue==20: 
+                        temperaturetoreach=Devices[NIGHTSETPOINT].nValue
+                    else:
+                        Log("ERROR: This code should not be reached, settings parameters to disable compensation")
+                        temperaturetoreach=20
+                        Compensation=0
+
+                    Debug("applying reference room temperature compensation: "+str((temperaturetoreach-CurrentInsideTemperature)*Compensation))
+                    TargetTemperature+=(temperaturetoreach-CurrentInsideTemperature)*Compensation
+            else:
+                Log("Error: Unable to get reference room termperature")
+                
+            # Make sure target temp remains within set boundaries
+            if TargetTemperature>Devices[MAXBOILERTEMP].nValue:
+                Debug("Calculated temp above max temp, correcting")
+                TargetTemperature=Devices[MAXBOILERTEMP].nValue
+            if TargetTemperature<Devices[MINBOILERTEMP].nValue:
+                Debug("Calculated temp below min temp, correcting")
+                TargetTemperature=Devices[MINBOILERTEMP].nValue
+
+            #Return values
+            return True,TargetTemperature,CurrentOutsideTemperature,CurrentInsideTemperature
 
 def DomoticzAPI(APICall):
     resultJson = None
@@ -377,6 +426,43 @@ def GetTemperature(TemperatureDeviceIDX):
         Log("error getting temperature from domoticz device with idx"+str(TemperatureDeviceIDX))
         return False,0
 
+def GetPidValue(sp, pv, pv_last, dt):
+    global ierr
+
+    Debug("sp="+str(sp)+", pv="+str(pv)+",pv_last="+str(pv_last)+",ierr="+str(ierr)+",dt="+str(dt))
+    #sp=setpoint, pv=current temp, pv_last=last temp, dt=duration
+    KP = 30
+    KI = 0.02
+    
+    # upper and lower bounds on heater level
+    ophi = 80;
+    oplo = 10;
+    
+    # calculate the error
+    error = sp - pv;
+    
+    # calculate the integral error
+    ierr = float(ierr) + float(KI) * float(error) * float(dt)
+    
+    # calculate the measurement derivative
+    dpv = (pv - pv_last) / dt
+    
+    # calculate the PID output
+    P = KP * error #proportional contribution
+    I = ierr   #integral contribution  
+    op = P + I
+    
+    #implement anti-reset windup
+    if ((op < oplo) or (op > ophi)):
+        I = I - KI * error * dt
+        #clip output
+        op = max(oplo, min(ophi, op))
+    
+    ierr = I
+    Debug("sp=" + str(sp) + " pv=" + str(pv) + " dt=" + str(dt) + " op=" + str(op) + " P=" + str(P) + " I=" + str(I))
+    return op
+
+
 class BasePlugin:
     enabled = False
     def __init__(self):
@@ -388,6 +474,8 @@ class BasePlugin:
         global OutsideTemperatureIdx
         global InsideTemperatureIdx
         global DayTimeExtensionTime
+        global LastInsideTemperatureValue
+        global LastInsideTemperatureTimestamp
 
         Debug("onStart called")
        
@@ -406,6 +494,12 @@ class BasePlugin:
         #Update Devices
         getSensors()
 
+        #Init Thermostat Values
+        Succes,LastInsideTemperatureValue=GetTemperature(Parameters["Mode3"])
+        LastInsideTemperatureTimestamp=time.time()
+        Debug("LastTemperature="+str(LastInsideTemperatureValue))
+
+
     def onStop(self):
         Debug("onStop called")
 
@@ -416,6 +510,10 @@ class BasePlugin:
         Debug("onMessage called")
 
     def onCommand(self, Unit, Command, Level, Hue):
+        global LastInsideTemperatureValue
+        global LastInsideTemperatureTimestamp
+        global ierr
+
         Debug("onCommand called for Unit " + str(Unit) + ": Parameter '" + str(Command) + "', Level: " + str(Level))
         #if Unit==in {CURVATURESWITCH or Unit==PROGRAMSWITCH:
         if Unit in {CURVATURESWITCH,MINBOILERTEMP,MAXBOILERTEMP,BOILERTEMPATMIN10,BOILERTEMPATPLUS20,SWITCHHEATINGOFFAT,
@@ -426,11 +524,20 @@ class BasePlugin:
             if Devices[Unit].nValue==0: 
                 Debug("Switch off heating")
                 ESPCommand("command?BoilerTemperature=0&CentralHeating=off")
-        elif Unit in {HOLIDAY,DAYTIMEEXTENSION,DHWCONTROL}:
+        elif Unit in {HOLIDAY,DAYTIMEEXTENSION,DHWCONTROL,FPWD}:
+            #Handle Switch
             NewValue=0
             if Command=="On":
                 NewValue=1
             Devices[Unit].Update(nValue=NewValue, sValue=Command)
+
+            #If FirePlace/WeatherDependent switch was set: reset thermostat vars
+            if (Unit==FPWD and Command=="Off"):
+                #Reset Thermostat Values
+                Succes,LastInsideTemperatureValue=GetTemperature(Parameters["Mode3"])
+                LastInsideTemperatureTimestamp=time.time()
+                ierr=0
+                Debug("LastTemperature="+str(LastInsideTemperatureValue))
         elif Unit==ENABLECENTRALHEATING:
             if Command.lower()=="on":
                 ESPCommand("command?CentralHeating=on")

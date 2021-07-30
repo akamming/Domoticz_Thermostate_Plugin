@@ -43,6 +43,7 @@ import math
 
 #Constants
 RequiredInterface=2
+SwitchOffHeatingDelta=1  #Switch off heating is current temp is more than this number of agrees above setpoint
 
 #UnitID's
 ENABLECENTRALHEATING=1
@@ -322,12 +323,10 @@ def CalculateBoilerSetPoint():
             Succes,CurrentInsideTemperature=GetTemperature(Parameters["Mode3"])
             if Succes:
                 Duration=time.time()-LastInsideTemperatureTimestamp
-                Debug("Duration = "+str(Duration))
-                Debug("Temperature to reach = "+str(temperaturetoreach))
-                if CurrentOutsideTemperature<(Devices[SWITCHHEATINGOFFAT].nValue):
+                if (CurrentOutsideTemperature<(Devices[SWITCHHEATINGOFFAT].nValue) or (CurrentInsideTemperature>(temperaturetoreach+SwitchOffHeatingDelta))): #let's just switch off
                     TargetTemperature =  GetPidValue(temperaturetoreach, CurrentInsideTemperature, LastInsideTemperatureValue, Duration)
                 else:
-                    Debug("Don't invoke PID, Outsidetemp is above minimum temp")
+                    Debug("Don't invoke PID, Outsidetemp is above minimum temp or too much above above setpoint")
                     TargetTemperature=CurrentOutsideTemperature
 
                 #remember current temp
@@ -601,7 +600,12 @@ class BasePlugin:
                                 UpdateOnOffSensor("DayTime Extension",DAYTIMEEXTENSION,"Off")
                         Debug("Handling Day program")
                         #Manage Heating
-                        ESPCommand("command?CentralHeating=on&BoilerTemperature="+str(TargetTemperature))
+                        if CurrentInsideTemperature>Devices[DAYSETPOINT].nValue+SwitchOffHeatingDelta:
+                            Debug("Inside temp too much above setpoint, switching off heating")
+                            ESPCommand("command?CentralHeating=off&BoilerTemperature=0")
+                        else:
+                            Debug("Setting boiler temp to "+str(TargetTemperature))
+                            ESPCommand("command?CentralHeating=on&BoilerTemperature="+str(TargetTemperature))
                         #Manage DHW
                         if Devices[DHWCONTROL].nValue==1:
                             if  Devices[ENABLEHOTWATER].nValue==0:

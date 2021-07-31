@@ -41,6 +41,8 @@ import urllib.request as request
 import base64 
 import math
 
+#TODO: change alle temp nvalues to float(svalue)
+
 #Constants
 RequiredInterface=2
 SwitchOffHeatingDelta=1  #Switch off heating is current temp is more than this number of agrees above setpoint
@@ -310,11 +312,11 @@ def CalculateBoilerSetPoint():
             temperaturetoreach=0
             #check to which target to get
             if (Devices[PROGRAMSWITCH].nValue==30 and Devices[HOLIDAY].nValue==0) or Devices[DAYTIMEEXTENSION].nValue==1:
-                temperaturetoreach=Devices[DAYSETPOINT].nValue
+                temperaturetoreach=float(Devices[DAYSETPOINT].sValue)
             elif Devices[PROGRAMSWITCH].nValue==10 or Devices[HOLIDAY].nValue==1:
-                temperaturetoreach=Devices[FROSTPROTECTIONSETPOINT].nValue
+                temperaturetoreach=float(Devices[FROSTPROTECTIONSETPOINT].sValue)
             elif Devices[PROGRAMSWITCH].nValue==20: 
-                temperaturetoreach=Devices[NIGHTSETPOINT].nValue
+                temperaturetoreach=float(Devices[NIGHTSETPOINT].sValue)
             else:
                 Log("ERROR: This code should not be reached, settings parameters to disable compensation")
                 return False,None,None,None
@@ -367,11 +369,11 @@ def CalculateBoilerSetPoint():
                     temperaturetoreach=0
                     #check to which target to get
                     if (Devices[PROGRAMSWITCH].nValue==30 and Devices[HOLIDAY].nValue==0) or Devices[DAYTIMEEXTENSION].nValue==1:
-                        temperaturetoreach=Devices[DAYSETPOINT].nValue
+                        temperaturetoreach=float(Devices[DAYSETPOINT].sValue)
                     elif Devices[PROGRAMSWITCH].nValue==10 or Devices[HOLIDAY].nValue==1:
-                        temperaturetoreach=Devices[FROSTPROTECTIONSETPOINT].nValue
+                        temperaturetoreach=float(Devices[FROSTPROTECTIONSETPOINT].sValue)
                     elif Devices[PROGRAMSWITCH].nValue==20: 
-                        temperaturetoreach=Devices[NIGHTSETPOINT].nValue
+                        temperaturetoreach=float(Devices[NIGHTSETPOINT].sValue)
                     else:
                         Log("ERROR: This code should not be reached, settings parameters to disable compensation")
                         temperaturetoreach=20
@@ -458,10 +460,24 @@ def GetPidValue(sp, pv, pv_last, dt):
     op = P + I + D
     
     #implement anti-reset windup
-    if ((op < oplo) or (op > ophi)):
-        I = I - KI * error * dt
+    #if ((op < oplo) or (op > ophi)):
+     #   I = I - KI * error * dt
         #clip output
-        op = max(oplo, min(ophi, op))
+      #  op = max(oplo, min(ophi, op))
+
+    if op<oplo:
+        Debug("reset op to oplo, error="+str(error))
+        op=oplo
+        if error<0:
+            Debug("Resetting ierr")
+            I = I - KI * error * dt
+
+    if op>ophi:
+        Debug("Reset op to ophi")
+        op=ophi
+        if error>0:
+            Debug("Resetting ierr")
+            I = I - KI * error * dt
     
     ierr = I
     Debug("sp=" + str(sp) + " pv=" + str(pv) + " dt=" + str(dt) + " op=" + str(op) + " P=" + str(P) + " I=" + str(I) + " D=" + str(D))
@@ -482,6 +498,7 @@ class BasePlugin:
         global DayTimeExtensionTime
         global LastInsideTemperatureValue
         global LastInsideTemperatureTimestamp
+        global ierr
 
         Debug("onStart called")
        
@@ -504,6 +521,11 @@ class BasePlugin:
         Succes,LastInsideTemperatureValue=GetTemperature(Parameters["Mode3"])
         LastInsideTemperatureTimestamp=time.time()
         Debug("LastTemperature="+str(LastInsideTemperatureValue))
+        Succes,CurrentOutsideTemperature=GetTemperature(Parameters["Mode2"])
+        if Succes:
+            ierr=CurrentOutsideTemperature  #Better starting point for ierr
+            Debug("Setting ierr to "+str(CurrentOutsideTemperature))
+
 
 
     def onStop(self):

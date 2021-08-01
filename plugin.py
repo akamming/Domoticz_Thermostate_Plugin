@@ -118,16 +118,18 @@ def UpdateCustomSensor(SensorName,UnitID,Value):
         if not (UnitID in Devices):
             Debug("Creating device "+SensorName)
             Domoticz.Device(Name=SensorName, Unit=UnitID, TypeName="Custom", Used=1).Create()
-        Devices[UnitID].Update(nValue=0, sValue=str(Value))
-        Domoticz.Log("Custom ("+Devices[UnitID].Name+")")
+        if float(Devices[UnitID].sValue)!=float(Value):
+            Devices[UnitID].Update(nValue=0, sValue=str(Value))
+            Domoticz.Log("Custom ("+Devices[UnitID].Name+")")
 
 def UpdatePercentageSensor(SensorName,UnitID,Value):
         #Creating devices in case they aren't there...
         if not (UnitID in Devices):
             Debug("Creating device "+SensorName)
             Domoticz.Device(Name=SensorName, Unit=UnitID, TypeName="Percentage", Used=1).Create()
-        Devices[UnitID].Update(nValue=int(Value), sValue=str(Value))
-        Domoticz.Log("Percentage ("+Devices[UnitID].Name+")")
+        if float(Devices[UnitID].sValue)!=float(Value):
+            Devices[UnitID].Update(nValue=int(Value), sValue=str(Value))
+            Domoticz.Log("Percentage ("+Devices[UnitID].Name+")")
 
 def UpdateOnOffSensor(SensorName,UnitID,Value):
         #Creating devices in case they aren't there...
@@ -147,20 +149,21 @@ def UpdateSetpoint(SensorName,UnitID,Value):
             Debug("Creating device "+SensorName)
             Domoticz.Device(Name=SensorName, Unit=UnitID, Type=242, Subtype=1, Used=1, Image=15).Create()
         try:
-            Devices[UnitID].Update(nValue=int(Value), sValue=str(Value))
-            Domoticz.Log("Setpoint ("+Devices[UnitID].Name+")")
+            if float(Devices[UnitID].sValue)!=float(Value):
+                Devices[UnitID].Update(nValue=int(Value), sValue=str(Value))
+                Domoticz.Log("Setpoint ("+Devices[UnitID].Name+")")
         except:
             Domoticz.Log("Error comparing setpoint values")
 
 def UpdateTemperatureSensor(SensorName,UnitID,Value):
-        Debug("Updating temperature sensor ")
         #Creating devices in case they aren't there...
         if not (UnitID in Devices):
             Debug("Creating device "+SensorName)
             Domoticz.Device(Name=SensorName, Unit=UnitID, TypeName="Temperature", Used=1).Create()
         try:
-            Devices[UnitID].Update(nValue=int(Value), sValue=str(Value))
-            Domoticz.Log("Temperature ("+Devices[UnitID].Name+")")
+            if float(Devices[UnitID].sValue)!=float(Value):
+                Devices[UnitID].Update(nValue=int(Value), sValue=str(Value))
+                Domoticz.Log("Temperature ("+Devices[UnitID].Name+")")
         except:
             Domoticz.Log("Error updating temperature")
 
@@ -169,8 +172,9 @@ def UpdatePressureSensor(SensorName,UnitID,Value):
         if not (UnitID in Devices):
             Debug("Creating device "+SensorName)
             Domoticz.Device(Name=SensorName, Unit=UnitID, TypeName="Pressure", Used=1).Create()
-        Devices[UnitID].Update(nValue=int(Value), sValue=str(Value))
-        Domoticz.Log("Pressure ("+Devices[UnitID].Name+")")
+        if float(Devices[UnitID].sValue)!=float(Value):
+            Devices[UnitID].Update(nValue=int(Value), sValue=str(Value))
+            Domoticz.Log("Pressure ("+Devices[UnitID].Name+")")
 
 def UpdateSensors(data):
     #Debug("Update steering vars")
@@ -546,7 +550,9 @@ class BasePlugin:
         #if Unit==in {CURVATURESWITCH or Unit==PROGRAMSWITCH:
         if Unit in {CURVATURESWITCH,MINBOILERTEMP,MAXBOILERTEMP,BOILERTEMPATMIN10,BOILERTEMPATPLUS20,SWITCHHEATINGOFFAT,
                 DAYSETPOINT,NIGHTSETPOINT,FROSTPROTECTIONSETPOINT,REFERENCEROOMCOMPENSATION}:
-            Devices[Unit].Update(nValue=int(Level), sValue=str(Level))
+            if float(Devices[Unit].sValue)!=float(Level):
+                Debug("Updating temp or setpoint")
+                Devices[Unit].Update(nValue=int(Level), sValue=str(Level))
         elif Unit==PROGRAMSWITCH:
             Devices[Unit].Update(nValue=int(Level), sValue=str(Level))
             if Devices[Unit].nValue==0: 

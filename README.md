@@ -1,5 +1,5 @@
 # Domoticz_Thermostate_Plugin
-Domoticz Plugin for ESP thermostat with weather dependent heating control
+Domoticz Plugin for ESP thermostat with weather dependent heating control, but can also act like a normal thermostat based on inside temperature only.
 
 ## Why this plugin
 My current boiler is end of life and i needed a new one. My current thermostate is already Weather Dependent, but cannot take advantage of the modulation features of a new boiler and i didn't like the limitations of all the commercial propositions of a smart weather dependent thermostate, so by creating one myself in domoticz I now have the following advantages:
@@ -51,6 +51,7 @@ If all works well, several devices should have been added to the devices tab and
 ![image](https://user-images.githubusercontent.com/30364409/118477419-f010f380-b70e-11eb-9796-9752f7067d76.png)
     
 2. Then there are additional setpoints you can configure to change the bevaviour
+    - A "Fireplace / Weather Dependent Control": If switched on, the thermostate is in Weather Dependant Mode, meaning the outside temperature and the heating curve determines the temperature of the boiler. If switched off, the plugin will act like a normal thermostat, bringing the room to the right temperature based on interna temperature sensor only.
     - "Program": a selector in which you can choose wich porgram to run: Off (no programming, only manual), Day (Boiler temperature is based on heating cuver and reference room compensation), Night (Boiler is switched off, unless below night setpoint), Frost Protection (Boiler is switched off, unless temperature below fp setpoint)
     - "Temperature compensation": setting the parameters will make sure that if reference room temperature is below the "setpoint", the boiler temperature is raised with the difference in temperature, multiplied by the "Temperature compensation" setting. E.g. when you want it bo be 20 Celcius, but actual temp is 18 celcius en temperature compensation is set to 5 degrees Celcius, the boiler temperature will be raised with 10 degreees celcius
     - "Day Setpoint", "Night Setpoint", "Frost Protection Setpoint". The setpoint values to aim for in the different pograms

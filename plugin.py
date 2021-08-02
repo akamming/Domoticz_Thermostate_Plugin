@@ -187,7 +187,6 @@ def UpdateSensors(data):
 
     #Update Sensors
     if data["OpenThermStatus"]=="OK":
-        Debug("Updating sensors")
         UpdateOnOffSensor("CentralHeating",CENTRALHEATING,data["CentralHeating"])
         UpdateOnOffSensor("HotWater",HOTWATER,data["HotWater"])
         UpdateOnOffSensor("Cooling",COOLING,data["Cooling"])
@@ -261,7 +260,6 @@ def CreateParameters():
     CreateOnOffSwitch("FirePlace/Weather Dependent Control",FPWD)
 
 def ProcessResponse(data):
-    Debug("ProcessResponse()")
     ifversion=0;
     #for x in data:
      #   Debug("Value "+x+" is "+str(data[x]))
@@ -271,7 +269,6 @@ def ProcessResponse(data):
         Log("ERROR: Could not get InterfaceVersion")
 
     if ifversion==RequiredInterface:
-        Debug("We have the correct interface")
         UpdateSensors(data)
     else:
         Log("Error Interace version "+str(RequiredInterface)+" required, make sure you have latest plugin and firmware")
@@ -284,7 +281,6 @@ def ESPCommand(url):
         #response = requests.get(Hostname+url, timeout=3)
         response = requests.get(Hostname+url)
         if (response.status_code==200):
-            Debug("Call succeeded")
             ProcessResponse(response.json())
         else:
             Log("ERROR: unable to contact ESP on "+url+", statuscode="+str(response.status_code))
@@ -292,7 +288,6 @@ def ESPCommand(url):
         Log("Error: Unable to call "+url)
 
 def getSensors():
-    Debug("Get Sensors()")
     ESPCommand("GetSensors")
 
 def CalculateBoilerSetPoint():
@@ -302,12 +297,11 @@ def CalculateBoilerSetPoint():
 
     #Calculate temperature
     TargetTemperature=0
-    Debug("Calculating Target Temperature")
     CurrentInsideTemperature=None
     Succes,CurrentOutsideTemperature=GetTemperature(Parameters["Mode2"])
     
     if not Succes:
-        Debug("Failed to get outside temperature")
+        Log("Failed to get outside temperature")
         return False,None,None,None 
     if Succes:
         #Check if we are in thermostat or Weather dependent mode
@@ -360,16 +354,14 @@ def CalculateBoilerSetPoint():
             TargetTemperatureWithoutCurvature=(20-CurrentOutsideTemperature)/MaxXDelta*MaxYDelta+Devices[BOILERTEMPATPLUS20].nValue
             Curvature=math.sin(math.pi*(20-CurrentOutsideTemperature)/MaxXDelta)*Devices[CURVATURESWITCH].nValue*MaxYDelta/100
             TargetTemperature+=Curvature+TargetTemperatureWithoutCurvature
-            Debug("TargetTemperature = "+str(TargetTemperatureWithoutCurvature)+" + "+str(Curvature)+" = "+str(TargetTemperature))
+            #Debug("TargetTemperature = "+str(TargetTemperatureWithoutCurvature)+" + "+str(Curvature)+" = "+str(TargetTemperature))
 
             #Apply reference room compensation
             Succes,CurrentInsideTemperature=GetTemperature(Parameters["Mode3"])
             if Succes:
                 #Perform reference room compensation if 
-                Debug("Checking for room temperature compensation")
                 Compensation=Devices[REFERENCEROOMCOMPENSATION].nValue
                 if Compensation>0:
-                    Debug("Reference Room Compensation is switched on, checking if we have to compensate")
                     temperaturetoreach=0
                     #check to which target to get
                     if (Devices[PROGRAMSWITCH].nValue==30 and Devices[HOLIDAY].nValue==0) or Devices[DAYTIMEEXTENSION].nValue==1:
@@ -402,11 +394,11 @@ def CalculateBoilerSetPoint():
 def DomoticzAPI(APICall):
     resultJson = None
     url = "http://{}:{}/json.htm?{}".format(Parameters["Address"], Parameters["Port"], parse.quote(APICall, safe="&="))
-    Domoticz.Debug("Calling domoticz API: {}".format(url))
+    #Domoticz.Debug("Calling domoticz API: {}".format(url))
     try:
         req = request.Request(url)
         if Parameters["Username"] != "":
-            Domoticz.Debug("Add authentification for user {}".format(Parameters["Username"]))
+            #Domoticz.Debug("Add authentification for user {}".format(Parameters["Username"]))
             credentials = ('%s:%s' % (Parameters["Username"], Parameters["Password"]))
             encoded_credentials = base64.b64encode(credentials.encode('ascii'))
             req.add_header('Authorization', 'Basic %s' % encoded_credentials.decode("ascii"))
@@ -427,7 +419,6 @@ def GetTemperature(TemperatureDeviceIDX):
     data = DomoticzAPI("type=devices&rid="+str(TemperatureDeviceIDX))
     try:
         CurrentTemperature=data["result"][0]["Temp"]
-        Debug("Current Temperature is "+str(CurrentTemperature))
         return True,CurrentTemperature
     except:
         #Domoticz Error
@@ -437,10 +428,10 @@ def GetTemperature(TemperatureDeviceIDX):
 def GetPidValue(sp, pv, pv_last, dt):
     global ierr
 
-    Debug("sp="+str(sp)+", pv="+str(pv)+",pv_last="+str(pv_last)+",ierr="+str(ierr)+",dt="+str(dt))
+    #Debug("sp="+str(sp)+", pv="+str(pv)+",pv_last="+str(pv_last)+",ierr="+str(ierr)+",dt="+str(dt))
     #sp=setpoint, pv=current temp, pv_last=last temp, dt=duration
     KP = 30
-    KI = 0.02
+    KI = 0.04 #0.02 was org value
     KD = 10
     
     # upper and lower bounds on heater level
@@ -470,22 +461,18 @@ def GetPidValue(sp, pv, pv_last, dt):
       #  op = max(oplo, min(ophi, op))
 
     if op<oplo:
-        Debug("reset op to oplo, error="+str(error))
         op=oplo
         if error<0:
-            Debug("Resetting ierr")
             I = I - KI * error * dt
 
     if op>ophi:
-        Debug("Reset op to ophi")
         op=ophi
         if error>0:
-            Debug("Resetting ierr")
             I = I - KI * error * dt
     
     ierr = I
-    Debug("sp=" + str(sp) + " pv=" + str(pv) + " dt=" + str(dt) + " op=" + str(op) + " P=" + str(P) + " I=" + str(I) + " D=" + str(D))
-    Debug("Import:" + str(sp) + ";" + str(pv) + ";" + str(dt) + ";" + str(op) + ";" + str(P) + ";" + str(I) + ";" + str(D))
+    #Debug("sp=" + str(sp) + " pv=" + str(pv) + " dt=" + str(dt) + " op=" + str(op) + " P=" + str(P) + " I=" + str(I) + " D=" + str(D))
+    Debug("Import;" + str(sp) + ";" + str(pv) + ";" + str(dt) + ";" + str(op) + ";" + str(P) + ";" + str(I) + ";" + str(D))
     return op
 
 
@@ -504,16 +491,12 @@ class BasePlugin:
         global LastInsideTemperatureTimestamp
         global ierr
 
-        Debug("onStart called")
-       
         # Read config
         #for  x in Parameters:
         #    Debug("Paramater "+x+" is "+str(Parameters[x]))
         Hostname="http://"+Parameters["Mode1"]+"/" 
-        Debug("Connection will be made to "+Hostname)
 
         DayTimeExtensionTime=int(Parameters["Mode4"])
-        Debug("Daytime Extension Time = "+str(DayTimeExtensionTime))
 
         #Create parameter setpoints
         CreateParameters()
@@ -524,11 +507,9 @@ class BasePlugin:
         #Init Thermostat Values
         Succes,LastInsideTemperatureValue=GetTemperature(Parameters["Mode3"])
         LastInsideTemperatureTimestamp=time.time()
-        Debug("LastTemperature="+str(LastInsideTemperatureValue))
         Succes,CurrentOutsideTemperature=GetTemperature(Parameters["Mode2"])
         if Succes:
-            ierr=CurrentOutsideTemperature  #Better starting point for ierr
-            Debug("Setting ierr to "+str(CurrentOutsideTemperature))
+            ierr=LastInsideTemperatureValue  #Better starting point for ierr
 
 
 
@@ -551,12 +532,10 @@ class BasePlugin:
         if Unit in {CURVATURESWITCH,MINBOILERTEMP,MAXBOILERTEMP,BOILERTEMPATMIN10,BOILERTEMPATPLUS20,SWITCHHEATINGOFFAT,
                 DAYSETPOINT,NIGHTSETPOINT,FROSTPROTECTIONSETPOINT,REFERENCEROOMCOMPENSATION}:
             if float(Devices[Unit].sValue)!=float(Level):
-                Debug("Updating temp or setpoint")
                 Devices[Unit].Update(nValue=int(Level), sValue=str(Level))
         elif Unit==PROGRAMSWITCH:
             Devices[Unit].Update(nValue=int(Level), sValue=str(Level))
             if Devices[Unit].nValue==0: 
-                Debug("Switch off heating")
                 ESPCommand("command?BoilerTemperature=0&CentralHeating=off")
         elif Unit in {HOLIDAY,DAYTIMEEXTENSION,DHWCONTROL,FPWD}:
             #Handle Switch
@@ -570,8 +549,9 @@ class BasePlugin:
                 #Reset Thermostat Values
                 Succes,LastInsideTemperatureValue=GetTemperature(Parameters["Mode3"])
                 LastInsideTemperatureTimestamp=time.time()
-                ierr=0
-                Debug("LastTemperature="+str(LastInsideTemperatureValue))
+                Succes,CurrentOutsideTemperature=GetTemperature(Parameters["Mode2"])
+                if Succes:
+                    ierr=LastInsideTemperatureValue  #Better starting point for ierr
         elif Unit==ENABLECENTRALHEATING:
             if Command.lower()=="on":
                 ESPCommand("command?CentralHeating=on")
@@ -592,7 +572,7 @@ class BasePlugin:
         elif Unit==DHWSETPOINT:
             ESPCommand("command?DHWTemperature="+str(Level))
         else: 
-            Debug("Unhandle command")
+            Log("Unhandled command")
 
     def onNotification(self, Name, Subject, Text, Status, Priority, Sound, ImageFile):
         Debug("Notification: " + Name + "," + Subject + "," + Text + "," + Status + "," + str(Priority) + "," + Sound + "," + ImageFile)
@@ -601,7 +581,6 @@ class BasePlugin:
         Debug("onDisconnect called")
 
     def onHeartbeat(self):
-        Debug("onHeartbeat called")
 
         if Devices[PROGRAMSWITCH].nValue==0:
             #Program inactive, just get sensors
@@ -651,7 +630,6 @@ class BasePlugin:
                                 ESPCommand("command?HotWater=off")
                         #Manage Heating
                         if CurrentInsideTemperature:
-                            Debug("Current inside temperature = "+str(CurrentInsideTemperature))
                             if CurrentInsideTemperature<Devices[FROSTPROTECTIONSETPOINT].nValue:
                                 #temperature too low, make there is heating
                                 ESPCommand("command?CentralHeating=on&BoilerTemperature="+str(TargetTemperature))
@@ -670,7 +648,6 @@ class BasePlugin:
                         #Manage Heating
                         Succes,CurrentInsideTemperature=GetTemperature(Parameters["Mode3"])
                         if CurrentInsideTemperature:
-                            Debug("Current inside temperature = "+str(CurrentInsideTemperature))
                             if CurrentInsideTemperature<Devices[NIGHTSETPOINT].nValue:
                                 #temperature too low, make there is heating
                                 #Check if we have to enable the central heating
@@ -681,9 +658,9 @@ class BasePlugin:
                             Debug("Unable to execute night program, no inside temperature")
                         
                     else:
-                        Debug("Unknow value of program switch: "+str(Devices[PROGRAMSWITCH].nValue))
+                        Log("Unknow value of program switch: "+str(Devices[PROGRAMSWITCH].nValue))
             else:
-                Debug("no outside temperature, could not execute program")
+                Log("no outside temperature, could not execute program")
 
 global _plugin
 _plugin = BasePlugin()

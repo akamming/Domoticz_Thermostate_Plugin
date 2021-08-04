@@ -431,7 +431,7 @@ def GetPidValue(sp, pv, pv_last, dt):
     #Debug("sp="+str(sp)+", pv="+str(pv)+",pv_last="+str(pv_last)+",ierr="+str(ierr)+",dt="+str(dt))
     #sp=setpoint, pv=current temp, pv_last=last temp, dt=duration
     KP = 30
-    KI = 0.04 #0.02 was org value
+    KI = 0.02 #0.02 was org value
     KD = 10
     
     # upper and lower bounds on heater level
@@ -581,10 +581,11 @@ class BasePlugin:
         Debug("onDisconnect called")
 
     def onHeartbeat(self):
+        Debug("Number of seconds: "+str(int(time.time())% 60))
 
-        if Devices[PROGRAMSWITCH].nValue==0:
+        if Devices[PROGRAMSWITCH].nValue==0 or int(time.time())%60>10:
             #Program inactive, just get sensors
-            Debug("Program inactive")
+            Debug("Program inactive or not in 1st 10 seconds of loop")
             getSensors()
         else:
             Succes,TargetTemperature,CurrentOutsideTemperature,CurrentInsideTemperature=CalculateBoilerSetPoint()

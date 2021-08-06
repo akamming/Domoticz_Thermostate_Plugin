@@ -584,6 +584,7 @@ class BasePlugin:
         Debug("Number of seconds: "+str(int(time.time())% 60))
 
         if Devices[PROGRAMSWITCH].nValue==0 or int(time.time())%60>10:
+        #if Devices[PROGRAMSWITCH].nValue==0:
             #Program inactive, just get sensors
             Debug("Program inactive or not in 1st 10 seconds of loop")
             getSensors()

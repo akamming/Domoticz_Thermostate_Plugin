@@ -41,7 +41,7 @@ import urllib.request as request
 import base64 
 import math
 
-#TODO: change alle temp nvalues to float(svalue)
+#TODO: 
 
 #Constants
 RequiredInterface=2
@@ -297,47 +297,50 @@ def CalculateBoilerSetPoint():
 
     #Calculate temperature
     TargetTemperature=0
-    CurrentInsideTemperature=None
-    Succes,CurrentOutsideTemperature=GetTemperature(Parameters["Mode2"])
+    CurrentSetpoint=0
     
+    #check to which target to get
+    if (Devices[PROGRAMSWITCH].nValue==30 and Devices[HOLIDAY].nValue==0) or Devices[DAYTIMEEXTENSION].nValue==1:
+        CurrentSetpoint=float(Devices[DAYSETPOINT].sValue)
+    elif Devices[PROGRAMSWITCH].nValue==10 or Devices[HOLIDAY].nValue==1:
+        CurrentSetpoint=float(Devices[FROSTPROTECTIONSETPOINT].sValue)
+    elif Devices[PROGRAMSWITCH].nValue==20: 
+        CurrentSetpoint=float(Devices[NIGHTSETPOINT].sValue)
+    else:
+        Log("ERROR: Unable to get current setpoint")
+        return False,None,None,None,None
+
+   
+    #Get Outside Temperature
+    Succes,CurrentOutsideTemperature=GetTemperature(Parameters["Mode2"])
     if not Succes:
         Log("Failed to get outside temperature")
-        return False,None,None,None 
+        return False,None,None,None,None 
+   
+    #Get Inside Temperature
+    Succes,CurrentInsideTemperature=GetTemperature(Parameters["Mode3"])
+    if not Succes:
+        Log("Failed to get inside temperature")
+        return False,None,None,None,None
+
     if Succes:
         #Check if we are in thermostat or Weather dependent mode
         if Devices[FPWD].nValue==0:
             Debug("Thermostat mode")
-            temperaturetoreach=0
-            #check to which target to get
-            if (Devices[PROGRAMSWITCH].nValue==30 and Devices[HOLIDAY].nValue==0) or Devices[DAYTIMEEXTENSION].nValue==1:
-                temperaturetoreach=float(Devices[DAYSETPOINT].sValue)
-            elif Devices[PROGRAMSWITCH].nValue==10 or Devices[HOLIDAY].nValue==1:
-                temperaturetoreach=float(Devices[FROSTPROTECTIONSETPOINT].sValue)
-            elif Devices[PROGRAMSWITCH].nValue==20: 
-                temperaturetoreach=float(Devices[NIGHTSETPOINT].sValue)
-            else:
-                Log("ERROR: This code should not be reached, settings parameters to disable compensation")
-                return False,None,None,None
            
-            #Get current temp
-            Succes,CurrentInsideTemperature=GetTemperature(Parameters["Mode3"])
-            if Succes:
-                Duration=time.time()-LastInsideTemperatureTimestamp
-                if (CurrentOutsideTemperature<(Devices[SWITCHHEATINGOFFAT].nValue) or (CurrentInsideTemperature>(temperaturetoreach+SwitchOffHeatingDelta))): #let's just switch off
-                    TargetTemperature =  GetPidValue(temperaturetoreach, CurrentInsideTemperature, LastInsideTemperatureValue, Duration)
-                else:
-                    Debug("Don't invoke PID, Outsidetemp is above minimum temp or too much above above setpoint")
-                    TargetTemperature=CurrentOutsideTemperature
-
-                #remember current temp
-                LastInsideTemperatureValue=CurrentInsideTemperature
-                LastInsideTemperatureTimestamp=time.time()
-
-                #Return Correct Values
-                return True,TargetTemperature,CurrentOutsideTemperature,CurrentInsideTemperature
+            Duration=time.time()-LastInsideTemperatureTimestamp
+            if (CurrentOutsideTemperature<(Devices[SWITCHHEATINGOFFAT].nValue) or (CurrentInsideTemperature>(CurrentSetpoint+SwitchOffHeatingDelta))): #let's just switch off
+                TargetTemperature =  GetPidValue(CurrentSetpoint, CurrentInsideTemperature, LastInsideTemperatureValue, Duration)
             else:
-                Log("Could not get inside temperature")
-                return False,None,None,None
+                Debug("Don't invoke PID, Outsidetemp is above minimum temp or too much above above setpoint")
+                TargetTemperature=CurrentOutsideTemperature
+
+            #remember current temp
+            LastInsideTemperatureValue=CurrentInsideTemperature
+            LastInsideTemperatureTimestamp=time.time()
+
+            #Return Correct Values
+            return True,TargetTemperature,CurrentOutsideTemperature,CurrentInsideTemperature,CurrentSetpoint
         else:
             Debug("Weather dependant mode")
 
@@ -358,27 +361,10 @@ def CalculateBoilerSetPoint():
 
             #Apply reference room compensation
             Succes,CurrentInsideTemperature=GetTemperature(Parameters["Mode3"])
-            if Succes:
-                #Perform reference room compensation if 
-                Compensation=Devices[REFERENCEROOMCOMPENSATION].nValue
-                if Compensation>0:
-                    temperaturetoreach=0
-                    #check to which target to get
-                    if (Devices[PROGRAMSWITCH].nValue==30 and Devices[HOLIDAY].nValue==0) or Devices[DAYTIMEEXTENSION].nValue==1:
-                        temperaturetoreach=float(Devices[DAYSETPOINT].sValue)
-                    elif Devices[PROGRAMSWITCH].nValue==10 or Devices[HOLIDAY].nValue==1:
-                        temperaturetoreach=float(Devices[FROSTPROTECTIONSETPOINT].sValue)
-                    elif Devices[PROGRAMSWITCH].nValue==20: 
-                        temperaturetoreach=float(Devices[NIGHTSETPOINT].sValue)
-                    else:
-                        Log("ERROR: This code should not be reached, settings parameters to disable compensation")
-                        temperaturetoreach=20
-                        Compensation=0
-
-                    Debug("applying reference room temperature compensation: "+str((temperaturetoreach-CurrentInsideTemperature)*Compensation))
-                    TargetTemperature+=(temperaturetoreach-CurrentInsideTemperature)*Compensation
-            else:
-                Log("Error: Unable to get reference room termperature")
+            Compensation=Devices[REFERENCEROOMCOMPENSATION].nValue
+            if Compensation>0:
+                Debug("applying reference room temperature compensation: "+str((CurrentSetpoint-CurrentInsideTemperature)*Compensation))
+                TargetTemperature+=(CurrentSetpoint-CurrentInsideTemperature)*Compensation
                 
             # Make sure target temp remains within set boundaries
             if TargetTemperature>Devices[MAXBOILERTEMP].nValue:
@@ -389,7 +375,7 @@ def CalculateBoilerSetPoint():
                 TargetTemperature=Devices[MINBOILERTEMP].nValue
 
             #Return values
-            return True,TargetTemperature,CurrentOutsideTemperature,CurrentInsideTemperature
+            return True,TargetTemperature,CurrentOutsideTemperature,CurrentInsideTemperature,CurrentSetpoint
 
 def DomoticzAPI(APICall):
     resultJson = None
@@ -583,17 +569,18 @@ class BasePlugin:
     def onHeartbeat(self):
         Debug("Number of seconds: "+str(int(time.time())% 60))
 
-        if Devices[PROGRAMSWITCH].nValue==0 or int(time.time())%60>10:
-        #if Devices[PROGRAMSWITCH].nValue==0:
+        #if Devices[PROGRAMSWITCH].nValue==0 or int(time.time())%60>10:
+        if Devices[PROGRAMSWITCH].nValue==0:
             #Program inactive, just get sensors
             Debug("Program inactive or not in 1st 10 seconds of loop")
             getSensors()
         else:
-            Succes,TargetTemperature,CurrentOutsideTemperature,CurrentInsideTemperature=CalculateBoilerSetPoint()
+            Succes,TargetTemperature,CurrentOutsideTemperature,CurrentInsideTemperature,CurrentSetpoint=CalculateBoilerSetPoint()
             if Succes:
+                Debug("Current Setpoint is "+str(CurrentSetpoint))
                 #Program Active, try to get outside temperature
                 if CurrentOutsideTemperature>(Devices[SWITCHHEATINGOFFAT].nValue):
-                    Debug("Temp aboven day treshold")
+                    Debug("outside temp aboven day treshold, leave or switch off heasting")
                     #We are at the temperature at which we can switchoff heating
                     ESPCommand("command?CentralHeating=off&BoilerTemperature=0")
                 else:
@@ -610,7 +597,7 @@ class BasePlugin:
                         Debug("Handling Day program")
                         #Manage Heating
                         if CurrentInsideTemperature>Devices[DAYSETPOINT].nValue+SwitchOffHeatingDelta:
-                            Debug("Inside temp too much above setpoint, switching off heating")
+                            Debug("Inside temp too much above setpoint, switching or leaving off heating")
                             ESPCommand("command?CentralHeating=off&BoilerTemperature=0")
                         else:
                             Debug("Setting boiler temp to "+str(TargetTemperature))
@@ -631,7 +618,8 @@ class BasePlugin:
                                 Log("Switching off DHW")
                                 ESPCommand("command?HotWater=off")
                         #Manage Heating
-                        if CurrentInsideTemperature:
+                        if Devices[FPWD].nValue==1:
+                            Debug("Weather Dependent Mode")
                             if CurrentInsideTemperature<Devices[FROSTPROTECTIONSETPOINT].nValue:
                                 #temperature too low, make there is heating
                                 ESPCommand("command?CentralHeating=on&BoilerTemperature="+str(TargetTemperature))
@@ -639,7 +627,15 @@ class BasePlugin:
                                 #temperature above setpoint, switch off heating
                                 ESPCommand("command?CentralHeating=off&BoilerTemperature=0")
                         else:
-                            Debug("Unable to execute Frost Protection program, no inside temperature")
+                            Debug("Thermostat mode")
+                            #Manage Heating
+                            if CurrentInsideTemperature>Devices[FROSTPROTECTIONSETPOINT].nValue+SwitchOffHeatingDelta:
+                                Debug("Inside temp too much above setpoint, switching or leaving off heating")
+                                ESPCommand("command?CentralHeating=off&BoilerTemperature=0")
+                            else:
+                                Debug("Setting boiler temp to "+str(TargetTemperature))
+                                ESPCommand("command?CentralHeating=on&BoilerTemperature="+str(TargetTemperature))
+
                     elif Devices[PROGRAMSWITCH].nValue==20:
                         Debug("Handling Night Program")
                         #Manage DHW
@@ -648,8 +644,8 @@ class BasePlugin:
                                 Log("Switching off DHW")
                                 ESPCommand("command?HotWater=off")
                         #Manage Heating
-                        Succes,CurrentInsideTemperature=GetTemperature(Parameters["Mode3"])
-                        if CurrentInsideTemperature:
+                        if Devices[FPWD].nValue==1:
+                            Debug("Weather Dependent Mode")
                             if CurrentInsideTemperature<Devices[NIGHTSETPOINT].nValue:
                                 #temperature too low, make there is heating
                                 #Check if we have to enable the central heating
@@ -657,12 +653,19 @@ class BasePlugin:
                             else:
                                 ESPCommand("command?CentralHeating=off&BoilerTemperature=0")
                         else:
-                            Debug("Unable to execute night program, no inside temperature")
+                            Debug("Thermostat mode")
+                            #Manage Heating
+                            if CurrentInsideTemperature>Devices[NIGHTSETPOINT].nValue+SwitchOffHeatingDelta:
+                                Debug("Inside temp too much above setpoint, switching or leaving off heating")
+                                ESPCommand("command?CentralHeating=off&BoilerTemperature=0")
+                            else:
+                                Debug("Setting boiler temp to "+str(TargetTemperature))
+                                ESPCommand("command?CentralHeating=on&BoilerTemperature="+str(TargetTemperature))
                         
                     else:
                         Log("Unknow value of program switch: "+str(Devices[PROGRAMSWITCH].nValue))
             else:
-                Log("no outside temperature, could not execute program")
+                Log("No temperatures returned from calculateboilersetpoint, could not execute program")
 
 global _plugin
 _plugin = BasePlugin()

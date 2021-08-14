@@ -284,8 +284,14 @@ def ESPCommand(url):
             ProcessResponse(response.json())
         else:
             Log("ERROR: unable to contact ESP on "+url+", statuscode="+str(response.status_code))
-    except:
-        Log("Error: Unable to call "+url)
+    except requests.exceptions.Timeout:
+        Log("Error: Unable to call "+url+", due to timeout")
+    except requests.exceptions.TooManyRedirects:
+        Log("Error: Unable to call "+url+", due to too many redirects")
+    except requests.exceptions.RequestException as e:
+        Log("Error: Unable to call "+url+", due to exception ("+str(e)+")")
+    #except:
+    #    Log("Error: Unable to call "+url)
 
 def getSensors():
     ESPCommand("GetSensors")
@@ -569,8 +575,8 @@ class BasePlugin:
     def onHeartbeat(self):
         Debug("Number of seconds: "+str(int(time.time())% 60))
 
-        #if Devices[PROGRAMSWITCH].nValue==0 or int(time.time())%60>10:
-        if Devices[PROGRAMSWITCH].nValue==0:
+        if Devices[PROGRAMSWITCH].nValue==0 or int(time.time())%60>10:
+        #if Devices[PROGRAMSWITCH].nValue==0:
             #Program inactive, just get sensors
             Debug("Program inactive or not in 1st 10 seconds of loop")
             getSensors()
@@ -580,7 +586,7 @@ class BasePlugin:
                 Debug("Current Setpoint is "+str(CurrentSetpoint))
                 #Program Active, try to get outside temperature
                 if CurrentOutsideTemperature>(Devices[SWITCHHEATINGOFFAT].nValue):
-                    Debug("outside temp aboven day treshold, leave or switch off heasting")
+                    Debug("outside temp aboven day treshold, leave or switch off heating")
                     #We are at the temperature at which we can switchoff heating
                     ESPCommand("command?CentralHeating=off&BoilerTemperature=0")
                 else:

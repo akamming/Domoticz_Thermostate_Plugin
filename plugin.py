@@ -40,6 +40,7 @@ import urllib.parse as parse
 import urllib.request as request
 import base64 
 import math
+import os
 
 #TODO: 
 
@@ -87,8 +88,7 @@ FPWD=35
 #Global vars
 Hostname=""
 DayTimeExtensionTime=120
-Debugging=True
-#Debugging=False
+Debugging=False
 
 #Vars for thermostat function
 LastInsideTemperatureValue=0 #Remember last temp to calc difference
@@ -467,6 +467,18 @@ def GetPidValue(sp, pv, pv_last, dt):
     Debug("Import;" + str(sp) + ";" + str(pv) + ";" + str(dt) + ";" + str(op) + ";" + str(P) + ";" + str(I) + ";" + str(D))
     return op
 
+def CheckDebug():
+    global Debugging
+    
+    #Check if we have to switch on debug mode
+    if os.path.exists(str(Parameters["HomeFolder"])+"DEBUG"):
+        Debugging=True
+        Debug("File "+str(Parameters["HomeFolder"])+"DEBUG"+" exists, switched on Debug mode")
+    else:
+        Debug("File "+str(Parameters["HomeFolder"])+"DEBUG"+" does not exist, switching off Debug mode")
+        Debugging=False #True/False
+
+
 
 class BasePlugin:
     enabled = False
@@ -482,6 +494,8 @@ class BasePlugin:
         global LastInsideTemperatureValue
         global LastInsideTemperatureTimestamp
         global ierr
+
+        CheckDebug()  #Check if we have to enable debugging
 
         # Read config
         #for  x in Parameters:
@@ -573,6 +587,7 @@ class BasePlugin:
         Debug("onDisconnect called")
 
     def onHeartbeat(self):
+        CheckDebug() #Check if we have to enable debug logging
         Debug("Number of seconds: "+str(int(time.time())% 60))
 
         if Devices[PROGRAMSWITCH].nValue==0:

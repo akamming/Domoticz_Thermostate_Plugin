@@ -420,11 +420,10 @@ def GetTemperature(TemperatureDeviceIDX):
 def GetPidValue(sp, pv, pv_last, dt):
     global ierr
 
-    #Debug("sp="+str(sp)+", pv="+str(pv)+",pv_last="+str(pv_last)+",ierr="+str(ierr)+",dt="+str(dt))
     #sp=setpoint, pv=current temp, pv_last=last temp, dt=duration
     KP = 30
     KI = 0.02 #0.02 was org value
-    KD = 10
+    KD = 0 # 10 was org value, setting to 0, since not enough precision on temp sensor, giving weird effects
     
     # upper and lower bounds on heater level
     ophi = Devices[MAXBOILERTEMP].nValue
@@ -446,12 +445,6 @@ def GetPidValue(sp, pv, pv_last, dt):
 
     op = P + I + D
     
-    #implement anti-reset windup
-    #if ((op < oplo) or (op > ophi)):
-     #   I = I - KI * error * dt
-        #clip output
-      #  op = max(oplo, min(ophi, op))
-
     if op<oplo:
         op=oplo
         if error<0:
@@ -463,7 +456,6 @@ def GetPidValue(sp, pv, pv_last, dt):
             I = I - KI * error * dt
     
     ierr = I
-    #Debug("sp=" + str(sp) + " pv=" + str(pv) + " dt=" + str(dt) + " op=" + str(op) + " P=" + str(P) + " I=" + str(I) + " D=" + str(D))
     Debug("Import;" + str(sp) + ";" + str(pv) + ";" + str(dt) + ";" + str(op) + ";" + str(P) + ";" + str(I) + ";" + str(D))
     return op
 

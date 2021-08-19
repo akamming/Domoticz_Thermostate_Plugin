@@ -279,7 +279,7 @@ def ESPCommand(url):
     Debug("Calling "+Hostname+url)
     try:
         #response = requests.get(Hostname+url, timeout=3)
-        response = requests.get(Hostname+url)
+        response = requests.get(Hostname+url,timeout=10) 
         if (response.status_code==200):
             ProcessResponse(response.json())
         else:

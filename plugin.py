@@ -43,6 +43,8 @@ import math
 import os
 
 #TODO: 
+# Switch off heating only when in FP/WD mode
+# Refactor code for WDP and MOdulating Thermostat mode
 
 #Constants
 RequiredInterface=2
@@ -595,10 +597,10 @@ class BasePlugin:
             if Succes:
                 Debug("Current Setpoint is "+str(CurrentSetpoint))
                 #Program Active, try to get outside temperature
-                if CurrentOutsideTemperature>(Devices[SWITCHHEATINGOFFAT].nValue):
-                    Debug("outside temp aboven day treshold, leave or switch off heating")
+                if CurrentOutsideTemperature>(Devices[SWITCHHEATINGOFFAT].nValue) and Devices[FPWD].nValue==1:
+                    Debug("Weather dependant and outside temp aboven day treshold, leave or switch off heating")
                     #We are at the temperature at which we can switchoff heating
-                    ESPCommand("command?CentralHeating=off&BoilerTemperature=0")
+                    ESPCommand("command?CentralHeating=off&Cooling=off&BoilerTemperature=0")
                 else:
                     if (Devices[PROGRAMSWITCH].nValue==30 and Devices[HOLIDAY].nValue==0) or Devices[DAYTIMEEXTENSION].nValue==1:
                         #check if we have to deactivate extension

@@ -86,6 +86,7 @@ FAULTCODE=32
 DHWFLOW=33
 OUTSIDETEMPERATURE=34
 FPWD=35
+COOLINGCONTROL=36
 
 #Global vars
 Hostname=""
@@ -95,6 +96,9 @@ Debugging=False
 #Vars for thermostat function
 LastInsideTemperatureValue=0 #Remember last temp to calc difference
 LastInsideTemperatureTimestamp=0
+CurrentInsideTemperature=0
+CurrentOutsideTemperature=0
+CurrentSetpoint=0
 
 ierr = 0 #Remember Integral Error
 
@@ -260,6 +264,7 @@ def CreateParameters():
     CreateOnOffSwitch("Holiday",HOLIDAY)
     CreateOnOffSwitch("DHW controlled by program",DHWCONTROL)
     CreateOnOffSwitch("FirePlace/Weather Dependent Control",FPWD)
+    CreateOnOffSwitch("Cooling Control",COOLINGCONTROL)
 
 def ProcessResponse(data):
     ifversion=0;
@@ -298,14 +303,12 @@ def ESPCommand(url):
 def getSensors():
     ESPCommand("GetSensors")
 
-def CalculateBoilerSetPoint():
-    global LastInsideTemperatureValue
-    global LastInsideTemperatureTimestamp
-   
-
-    #Calculate temperature
-    TargetTemperature=0
-    CurrentSetpoint=0
+def UpdateTemperatures():
+    global CurrentInsideTemperature
+    global CurrentOutsideTemperature
+    global CurrentSetpoint
+    
+    ReturnValue=True
     
     #check to which target to get
     if (Devices[PROGRAMSWITCH].nValue==30 and Devices[HOLIDAY].nValue==0) or Devices[DAYTIMEEXTENSION].nValue==1:
@@ -316,22 +319,34 @@ def CalculateBoilerSetPoint():
         CurrentSetpoint=float(Devices[NIGHTSETPOINT].sValue)
     else:
         Log("ERROR: Unable to get current setpoint")
-        return False,None,None,None,None
+        ReturnValue=False
 
-   
     #Get Outside Temperature
     Succes,CurrentOutsideTemperature=GetTemperature(Parameters["Mode2"])
     if not Succes:
         Log("Failed to get outside temperature")
-        return False,None,None,None,None 
-   
+        ReturnValue=False
+
     #Get Inside Temperature
     Succes,CurrentInsideTemperature=GetTemperature(Parameters["Mode3"])
     if not Succes:
         Log("Failed to get inside temperature")
-        return False,None,None,None,None
+        ReturnValue=False
 
-    if Succes:
+    return ReturnValue
+    
+
+def CalculateBoilerSetPoint():
+    global LastInsideTemperatureValue
+    global LastInsideTemperatureTimestamp
+    global CurrentInsideTemperature,CurrentOutsideTemperature,TargetTemperature
+
+    if not UpdateTemperatures():
+        Debug("Unable to update temperatures")
+        return False,None
+    else:
+        Debug("Updated temperatures")
+
         #Check if we are in thermostat or Weather dependent mode
         if Devices[FPWD].nValue==0:
             Debug("Thermostat mode")
@@ -344,7 +359,7 @@ def CalculateBoilerSetPoint():
             LastInsideTemperatureTimestamp=time.time()
 
             #Return Correct Values
-            return True,TargetTemperature,CurrentOutsideTemperature,CurrentInsideTemperature,CurrentSetpoint
+            return True,TargetTemperature
         else:
             Debug("Weather dependant mode")
 
@@ -355,13 +370,11 @@ def CalculateBoilerSetPoint():
             #Curvature=Devices[CURVATURESWITCH].nValue/20+1
             #MaxToReach=MaxYDelta**Curvature
             #TargetTemperature=((20-CurrentOutsideTemperature)/MaxXDelta*(MaxToReach))**(1/Curvature)+Devices[BOILERTEMPATPLUS20].nValue
-            #Debug("Calculated temperature according to heating curve: "+str(TargetTemperature))
 
             #Calculation based on sine curve
             TargetTemperatureWithoutCurvature=(20-CurrentOutsideTemperature)/MaxXDelta*MaxYDelta+Devices[BOILERTEMPATPLUS20].nValue
             Curvature=math.sin(math.pi*(20-CurrentOutsideTemperature)/MaxXDelta)*Devices[CURVATURESWITCH].nValue*MaxYDelta/100
-            TargetTemperature+=Curvature+TargetTemperatureWithoutCurvature
-            #Debug("TargetTemperature = "+str(TargetTemperatureWithoutCurvature)+" + "+str(Curvature)+" = "+str(TargetTemperature))
+            TargetTemperature=Curvature+TargetTemperatureWithoutCurvature
 
             #Apply reference room compensation
             Succes,CurrentInsideTemperature=GetTemperature(Parameters["Mode3"])
@@ -379,7 +392,7 @@ def CalculateBoilerSetPoint():
                 TargetTemperature=Devices[MINBOILERTEMP].nValue
 
             #Return values
-            return True,TargetTemperature,CurrentOutsideTemperature,CurrentInsideTemperature,CurrentSetpoint
+            return True,TargetTemperature
 
 def DomoticzAPI(APICall):
     resultJson = None
@@ -420,7 +433,7 @@ def GetPidValue(sp, pv, pv_last, dt):
 
     #sp=setpoint, pv=current temp, pv_last=last temp, dt=duration
     KP = 30
-    KI = 0.02 #0.02 was org value
+    KI = 0.01 #0.02 was org value
     KD = 0 # 10 was org value, setting to 0, since not enough precision on temp sensor, giving weird effects
     
     # upper and lower bounds on heater level
@@ -496,7 +509,7 @@ class BasePlugin:
 
         DayTimeExtensionTime=int(Parameters["Mode4"])
 
-        #Create parameter setpoints
+        #Create parameters if they don;t exist
         CreateParameters()
 
         #Update Devices
@@ -588,12 +601,15 @@ class BasePlugin:
     def onHeartbeat(self):
         CheckDebug() #Check if we have to enable debug logging
 
+        #Make sure all params are there..
+        CreateParameters()
+
         if Devices[PROGRAMSWITCH].nValue==0:
             #Program inactive, just get sensors
             Debug("Program inactive")
             getSensors()
         else:
-            Succes,TargetTemperature,CurrentOutsideTemperature,CurrentInsideTemperature,CurrentSetpoint=CalculateBoilerSetPoint()
+            Succes,TargetTemperature=CalculateBoilerSetPoint()
             if Succes:
                 Debug("Current Setpoint is "+str(CurrentSetpoint))
                 #Program Active, try to get outside temperature

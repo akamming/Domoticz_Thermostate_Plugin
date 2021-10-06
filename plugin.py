@@ -96,6 +96,9 @@ Debugging=False
 #Vars for thermostat function
 LastInsideTemperatureValue=0 #Remember last temp to calc difference
 LastInsideTemperatureTimestamp=0
+SecondLastInsideTemperatureValue=0
+SecondLastInsideTemperatureTimestamp=0
+DeltaKPS=0 # Calculate change in temperature in Kelvin per Sec
 CurrentInsideTemperature=0
 CurrentOutsideTemperature=0
 CurrentSetpoint=0
@@ -304,6 +307,11 @@ def getSensors():
     ESPCommand("GetSensors")
 
 def UpdateTemperatures():
+    global LastInsideTemperatureValue
+    global LastInsideTemperatureTimestamp
+    global SecondLastInsideTemperatureValue
+    global SecondLastInsideTemperatureTimestamp
+    global DeltaKPS
     global CurrentInsideTemperature
     global CurrentOutsideTemperature
     global CurrentSetpoint
@@ -329,49 +337,62 @@ def UpdateTemperatures():
 
     #Get Inside Temperature
     Succes,CurrentInsideTemperature=GetTemperature(Parameters["Mode3"])
-    if not Succes:
+    if Succes:
+        if CurrentInsideTemperature!=LastInsideTemperatureValue:
+            Debug ("SecondLastInsideTemperatureTimestamp="+str(SecondLastInsideTemperatureTimestamp))
+            if SecondLastInsideTemperatureTimestamp==0: ## if 0, then needs to be initialised
+                SecondLastInsideTemperatureValue=CurrentInsideTemperature
+                SecondLastInsideTemperatureTimestamp=time.time()
+            else:
+                SecondLastInsideTemperatureValue=LastInsideTemperatureValue
+                SecondLastInsideTemperatureTimestamp=LastInsideTemperatureTimestamp
+            LastInsideTemperatureValue=CurrentInsideTemperature
+            LastInsideTemperatureTimestamp=time.time()
+    else:
         Log("Failed to get inside temperature")
         ReturnValue=False
+
+    #Calculate temp difference per seconds (in Kelvin)
+    if (SecondLastInsideTemperatureTimestamp==time.time()):
+        DeltaKPS=0
+    else:
+        DeltaKPS=(CurrentInsideTemperature-SecondLastInsideTemperatureValue)/(time.time()-SecondLastInsideTemperatureTimestamp)
+
+    Debug("Current Temp = "+str(CurrentInsideTemperature))
+    Debug("Last: temp was "+str(LastInsideTemperatureValue)+" at "+time.asctime( time.localtime(LastInsideTemperatureTimestamp))) 
+    Debug("SecondLast: temp was "+str(SecondLastInsideTemperatureValue)+" at "+time.asctime( time.localtime(SecondLastInsideTemperatureTimestamp)))
+    Debug("Temp difference in Kelvin per hour = "+str(DeltaKPS*3600))
+
+
 
     return ReturnValue
     
 
 def CalculateBoilerSetPoint():
-    global LastInsideTemperatureValue
-    global LastInsideTemperatureTimestamp
     global CurrentInsideTemperature,CurrentOutsideTemperature,TargetTemperature
 
     if not UpdateTemperatures():
         Debug("Unable to update temperatures")
         return False,None
     else:
-        Debug("Updated temperatures")
-
         #Check if we are in thermostat or Weather dependent mode
         if Devices[FPWD].nValue==0:
-            Debug("Thermostat mode")
-           
             Duration=time.time()-LastInsideTemperatureTimestamp
-            TargetTemperature = GetPidValue(CurrentSetpoint, CurrentInsideTemperature, LastInsideTemperatureValue, Duration)
-
-            #remember current temp
-            LastInsideTemperatureValue=CurrentInsideTemperature
-            LastInsideTemperatureTimestamp=time.time()
+            #TargetTemperature = GetPidValue(CurrentSetpoint, CurrentInsideTemperature, LastInsideTemperatureValue, Duration)
+            TargetTemperature = GetPidValue(CurrentSetpoint, CurrentInsideTemperature, LastInsideTemperatureValue, 10)
 
             #Return Correct Values
             return True,TargetTemperature
         else:
-            Debug("Weather dependant mode")
-
             MaxYDelta=Devices[BOILERTEMPATMIN10].nValue-Devices[BOILERTEMPATPLUS20].nValue #boilertemp at -10 minus boilertemp at +20
             MaxXDelta=30 # 20 - (-10)=30
 
-            #Calculate based on root function
+            #Calculate curve based on root function
             #Curvature=Devices[CURVATURESWITCH].nValue/20+1
             #MaxToReach=MaxYDelta**Curvature
             #TargetTemperature=((20-CurrentOutsideTemperature)/MaxXDelta*(MaxToReach))**(1/Curvature)+Devices[BOILERTEMPATPLUS20].nValue
 
-            #Calculation based on sine curve
+            #curve Calculation based on sine curve
             TargetTemperatureWithoutCurvature=(20-CurrentOutsideTemperature)/MaxXDelta*MaxYDelta+Devices[BOILERTEMPATPLUS20].nValue
             Curvature=math.sin(math.pi*(20-CurrentOutsideTemperature)/MaxXDelta)*Devices[CURVATURESWITCH].nValue*MaxYDelta/100
             TargetTemperature=Curvature+TargetTemperatureWithoutCurvature
@@ -397,7 +418,6 @@ def CalculateBoilerSetPoint():
 def DomoticzAPI(APICall):
     resultJson = None
     url = "http://{}:{}/json.htm?{}".format(Parameters["Address"], Parameters["Port"], parse.quote(APICall, safe="&="))
-    #Domoticz.Debug("Calling domoticz API: {}".format(url))
     try:
         req = request.Request(url)
         if Parameters["Username"] != "":
@@ -430,6 +450,7 @@ def GetTemperature(TemperatureDeviceIDX):
 
 def GetPidValue(sp, pv, pv_last, dt):
     global ierr,CurrentInsideTemperature
+
 
     #sp=setpoint, pv=current temp, pv_last=last temp, dt=duration
     KP = 30
@@ -464,14 +485,19 @@ def GetPidValue(sp, pv, pv_last, dt):
             I = I - KI * error * dt
 
 
-    Debug("Boiler setpoint : "+str(Devices[BOILERSETPOINT].sValue))
-    if (op<CurrentInsideTemperature and op<float(Devices[BOILERSETPOINT].sValue) and Devices[COOLINGCONTROL].nValue==0):
-        Debug("Coolingcontrol off,calculated boilersetpoint below currenttemp and still decreasing, dont update I value")
-    else:
-        Debug("Updating I value")
-        ierr = I
+    Debug("ierr="+str(ierr))
+    #Debug("Boiler setpoint : "+str(Devices[BOILERSETPOINT].sValue))
+    if Devices[COOLINGCONTROL].nValue==0:
+        if op>CurrentInsideTemperature and op>float(Devices[BOILERSETPOINT].sValue):
+            ierr = I
+        else:
+            Debug("Not updating I Value")
+    else: 
+        Debug("Cooling is on")
+
+    Debug("ierr="+str(ierr))
     
-    Debug("Import;" + str(sp) + ";" + str(pv) + ";" + str(dt) + ";" + str(op) + ";" + str(P) + ";" + str(I) + ";" + str(D))
+    Debug("Import;sp=" + str(sp) + ";pv(setpoint)=" + str(pv) + ";dt(delta time)=" + str(dt) + ";op(PID)=" + str(op) + ";P=" + str(P) + ";I=" + str(I) + ";D=" + str(D))
     return op
 
 def CheckDebug():
@@ -629,11 +655,8 @@ class BasePlugin:
         getSensors()
 
         #Init Thermostat Values
-        Succes,LastInsideTemperatureValue=GetTemperature(Parameters["Mode3"])
-        LastInsideTemperatureTimestamp=time.time()
-        Succes,CurrentOutsideTemperature=GetTemperature(Parameters["Mode2"])
-        if Succes:
-            ierr=LastInsideTemperatureValue  #Better starting point for ierr
+        UpdateTemperatures()
+        ierr=LastInsideTemperatureValue  #Better starting point for ierr
 
 
 

@@ -488,10 +488,10 @@ def GetPidValue(sp, pv, pv_last, dt):
     Debug("ierr="+str(ierr))
     #Debug("Boiler setpoint : "+str(Devices[BOILERSETPOINT].sValue))
     if Devices[COOLINGCONTROL].nValue==0:
-        if op>CurrentInsideTemperature and op>float(Devices[BOILERSETPOINT].sValue):
-            ierr = I
-        else:
+        if op<float(Devices[BOILERSETPOINT].sValue) and float(Devices[BOILERSETPOINT].sValue)<CurrentInsideTemperature:
             Debug("Not updating I Value")
+        else:
+            ierr = I
     else: 
         Debug("Cooling is on")
 

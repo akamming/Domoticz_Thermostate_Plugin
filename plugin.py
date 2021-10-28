@@ -402,7 +402,7 @@ def CalculateBoilerSetPoint():
             TargetTemperature=Devices[MINBOILERTEMP].nValue
 
         #Return values
-            return True,TargetTemperature
+        return True,TargetTemperature
 
 def DomoticzAPI(APICall):
     resultJson = None

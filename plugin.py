@@ -98,10 +98,11 @@ LastInsideTemperatureValue=0 #Remember last temp to calc difference
 LastInsideTemperatureTimestamp=0
 SecondLastInsideTemperatureValue=0
 SecondLastInsideTemperatureTimestamp=0
-DeltaKPS=0 # Calculate change in temperature in Kelvin per Sec
+DeltaKPH=0 # Calculate change in temperature in Kelvin per hour
 CurrentInsideTemperature=0
 CurrentOutsideTemperature=0
 CurrentSetpoint=0
+InsideTempAt=[] #Remember the inside temp the last hour
 
 ierr = 0 #Remember Integral Error
 
@@ -311,7 +312,6 @@ def UpdateTemperatures():
     global LastInsideTemperatureTimestamp
     global SecondLastInsideTemperatureValue
     global SecondLastInsideTemperatureTimestamp
-    global DeltaKPS
     global CurrentInsideTemperature
     global CurrentOutsideTemperature
     global CurrentSetpoint
@@ -352,16 +352,9 @@ def UpdateTemperatures():
         Log("Failed to get inside temperature")
         ReturnValue=False
 
-    #Calculate temp difference per seconds (in Kelvin)
-    if (SecondLastInsideTemperatureTimestamp==time.time()):
-        DeltaKPS=0
-    else:
-        DeltaKPS=(CurrentInsideTemperature-SecondLastInsideTemperatureValue)/(time.time()-SecondLastInsideTemperatureTimestamp)
-
     Debug("Current Temp = "+str(CurrentInsideTemperature))
     Debug("Last: temp was "+str(LastInsideTemperatureValue)+" at "+time.asctime( time.localtime(LastInsideTemperatureTimestamp))) 
     Debug("SecondLast: temp was "+str(SecondLastInsideTemperatureValue)+" at "+time.asctime( time.localtime(SecondLastInsideTemperatureTimestamp)))
-    Debug("Temp difference in Kelvin per hour = "+str(DeltaKPS*3600))
 
 
 
@@ -371,48 +364,44 @@ def UpdateTemperatures():
 def CalculateBoilerSetPoint():
     global CurrentInsideTemperature,CurrentOutsideTemperature,TargetTemperature
 
-    if not UpdateTemperatures():
-        Debug("Unable to update temperatures")
-        return False,None
+    #Check if we are in thermostat or Weather dependent mode
+    if Devices[FPWD].nValue==0:
+        Duration=time.time()-LastInsideTemperatureTimestamp
+        #TargetTemperature = GetPidValue(CurrentSetpoint, CurrentInsideTemperature, LastInsideTemperatureValue, Duration)
+        TargetTemperature = GetPidValue(CurrentSetpoint, CurrentInsideTemperature, LastInsideTemperatureValue, 10)
+
+        #Return Correct Values
+        return True,TargetTemperature
     else:
-        #Check if we are in thermostat or Weather dependent mode
-        if Devices[FPWD].nValue==0:
-            Duration=time.time()-LastInsideTemperatureTimestamp
-            #TargetTemperature = GetPidValue(CurrentSetpoint, CurrentInsideTemperature, LastInsideTemperatureValue, Duration)
-            TargetTemperature = GetPidValue(CurrentSetpoint, CurrentInsideTemperature, LastInsideTemperatureValue, 10)
+        MaxYDelta=Devices[BOILERTEMPATMIN10].nValue-Devices[BOILERTEMPATPLUS20].nValue #boilertemp at -10 minus boilertemp at +20
+        MaxXDelta=30 # 20 - (-10)=30
 
-            #Return Correct Values
-            return True,TargetTemperature
-        else:
-            MaxYDelta=Devices[BOILERTEMPATMIN10].nValue-Devices[BOILERTEMPATPLUS20].nValue #boilertemp at -10 minus boilertemp at +20
-            MaxXDelta=30 # 20 - (-10)=30
+        #Calculate curve based on root function
+        #Curvature=Devices[CURVATURESWITCH].nValue/20+1
+        #MaxToReach=MaxYDelta**Curvature
+        #TargetTemperature=((20-CurrentOutsideTemperature)/MaxXDelta*(MaxToReach))**(1/Curvature)+Devices[BOILERTEMPATPLUS20].nValue
 
-            #Calculate curve based on root function
-            #Curvature=Devices[CURVATURESWITCH].nValue/20+1
-            #MaxToReach=MaxYDelta**Curvature
-            #TargetTemperature=((20-CurrentOutsideTemperature)/MaxXDelta*(MaxToReach))**(1/Curvature)+Devices[BOILERTEMPATPLUS20].nValue
+        #curve Calculation based on sine curve
+        TargetTemperatureWithoutCurvature=(20-CurrentOutsideTemperature)/MaxXDelta*MaxYDelta+Devices[BOILERTEMPATPLUS20].nValue
+        Curvature=math.sin(math.pi*(20-CurrentOutsideTemperature)/MaxXDelta)*Devices[CURVATURESWITCH].nValue*MaxYDelta/100
+        TargetTemperature=Curvature+TargetTemperatureWithoutCurvature
 
-            #curve Calculation based on sine curve
-            TargetTemperatureWithoutCurvature=(20-CurrentOutsideTemperature)/MaxXDelta*MaxYDelta+Devices[BOILERTEMPATPLUS20].nValue
-            Curvature=math.sin(math.pi*(20-CurrentOutsideTemperature)/MaxXDelta)*Devices[CURVATURESWITCH].nValue*MaxYDelta/100
-            TargetTemperature=Curvature+TargetTemperatureWithoutCurvature
+        #Apply reference room compensation
+        Succes,CurrentInsideTemperature=GetTemperature(Parameters["Mode3"])
+        Compensation=Devices[REFERENCEROOMCOMPENSATION].nValue
+        if Compensation>0:
+            Debug("applying reference room temperature compensation: "+str((CurrentSetpoint-CurrentInsideTemperature)*Compensation))
+            TargetTemperature+=(CurrentSetpoint-CurrentInsideTemperature)*Compensation
+            
+        # Make sure target temp remains within set boundaries
+        if TargetTemperature>Devices[MAXBOILERTEMP].nValue:
+            Debug("Calculated temp above max temp, correcting")
+            TargetTemperature=Devices[MAXBOILERTEMP].nValue
+        if TargetTemperature<Devices[MINBOILERTEMP].nValue:
+            Debug("Calculated temp below min temp, correcting")
+            TargetTemperature=Devices[MINBOILERTEMP].nValue
 
-            #Apply reference room compensation
-            Succes,CurrentInsideTemperature=GetTemperature(Parameters["Mode3"])
-            Compensation=Devices[REFERENCEROOMCOMPENSATION].nValue
-            if Compensation>0:
-                Debug("applying reference room temperature compensation: "+str((CurrentSetpoint-CurrentInsideTemperature)*Compensation))
-                TargetTemperature+=(CurrentSetpoint-CurrentInsideTemperature)*Compensation
-                
-            # Make sure target temp remains within set boundaries
-            if TargetTemperature>Devices[MAXBOILERTEMP].nValue:
-                Debug("Calculated temp above max temp, correcting")
-                TargetTemperature=Devices[MAXBOILERTEMP].nValue
-            if TargetTemperature<Devices[MINBOILERTEMP].nValue:
-                Debug("Calculated temp below min temp, correcting")
-                TargetTemperature=Devices[MINBOILERTEMP].nValue
-
-            #Return values
+        #Return values
             return True,TargetTemperature
 
 def DomoticzAPI(APICall):
@@ -450,12 +439,12 @@ def GetTemperature(TemperatureDeviceIDX):
 
 def GetPidValue(sp, pv, pv_last, dt):
     global ierr,CurrentInsideTemperature
-
+    global DeltaKPH #Delta in Kelvin Per Hour
 
     #sp=setpoint, pv=current temp, pv_last=last temp, dt=duration
     KP = 30
     KI = 0.01 #0.02 was org value
-    KD = 0 # 10 was org value, setting to 0, since not enough precision on temp sensor, giving weird effects
+    KD = 2.5 # Correction per every Delta K per Hour
     
     # upper and lower bounds on heater level
     ophi = Devices[MAXBOILERTEMP].nValue
@@ -470,7 +459,8 @@ def GetPidValue(sp, pv, pv_last, dt):
     # calculate the PID output
     P = KP * error #proportional contribution
     I = float(ierr) + float(KI) * float(error) * float(dt) #integral contribution
-    D = -KD*dpv #deritive contribution
+    D = -KD*DeltaKPH #deritive contribution
+    #D = -KD*dpv #deritive contribution
 
     op = P + I + D
     
@@ -485,7 +475,6 @@ def GetPidValue(sp, pv, pv_last, dt):
             I = I - KI * error * dt
 
 
-    Debug("ierr="+str(ierr))
     #Debug("Boiler setpoint : "+str(Devices[BOILERSETPOINT].sValue))
     if Devices[COOLINGCONTROL].nValue==0:
         if op<float(Devices[BOILERSETPOINT].sValue) and float(Devices[BOILERSETPOINT].sValue)<CurrentInsideTemperature:
@@ -495,8 +484,6 @@ def GetPidValue(sp, pv, pv_last, dt):
     else: 
         Debug("Cooling is on")
 
-    Debug("ierr="+str(ierr))
-    
     Debug("Import;sp=" + str(sp) + ";pv(setpoint)=" + str(pv) + ";dt(delta time)=" + str(dt) + ";op(PID)=" + str(op) + ";P=" + str(P) + ";I=" + str(I) + ";D=" + str(D))
     return op
 
@@ -638,6 +625,7 @@ class BasePlugin:
         global LastInsideTemperatureValue
         global LastInsideTemperatureTimestamp
         global ierr
+        global InsideTempAt
 
         CheckDebug()  #Check if we have to enable debugging
 
@@ -656,9 +644,12 @@ class BasePlugin:
 
         #Init Thermostat Values
         UpdateTemperatures()
-        ierr=LastInsideTemperatureValue  #Better starting point for ierr
 
+        #Initialise ierr
+        ierr=LastInsideTemperatureValue  
 
+        #initialise InsideTempAt array
+        InsideTempAt = [LastInsideTemperatureValue for i in range(60)]
 
     def onStop(self):
         Debug("onStop called")
@@ -735,18 +726,33 @@ class BasePlugin:
         Debug("onDisconnect called")
 
     def onHeartbeat(self):
+        global CurrentInsideTemperature
+        global InsideTempAt
+        global DeltaKPH
+
         CheckDebug() #Check if we have to enable debug logging
         
         #Make sure all params are there so the user can control the program..
         CreateParameters()
 
-        if Devices[PROGRAMSWITCH].nValue==0:
-            #Program inactive, just get sensors
-            Debug("Program inactive")
-            getSensors()
+        if (UpdateTemperatures()):
+            #Update History
+            CurrentMin=int((time.time() % 3600) / 60)
+            InsideTempAt[CurrentMin]=CurrentInsideTemperature
+            Debug("Updated InsideTemp At "+str(CurrentMin)+" with "+str(InsideTempAt[CurrentMin]))
+            DeltaKPH = (CurrentInsideTemperature-InsideTempAt[(CurrentMin+45)%60])*4
+            Debug("DeltaKPH = "+str(DeltaKPH))
+
+            if Devices[PROGRAMSWITCH].nValue==0:
+                #Program inactive, just get sensors
+                Debug("Program inactive")
+                getSensors()
+            else:
+                #Handling the program
+                HandleProgram()
         else:
-            #Handling the program
-            HandleProgram()
+            Debug("Do nothing: Unable to get temperatures")
+            getSensors()
 
 global _plugin
 _plugin = BasePlugin()

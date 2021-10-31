@@ -326,8 +326,7 @@ def UpdateTemperatures():
     elif Devices[PROGRAMSWITCH].nValue==20: 
         CurrentSetpoint=float(Devices[NIGHTSETPOINT].sValue)
     else:
-        Log("ERROR: Unable to get current setpoint")
-        ReturnValue=False
+        Debug("Heating is switched off")
 
     #Get Outside Temperature
     Succes,CurrentOutsideTemperature=GetTemperature(Parameters["Mode2"])
@@ -740,7 +739,7 @@ class BasePlugin:
             CurrentMin=int((time.time() % 3600) / 60)
             InsideTempAt[CurrentMin]=CurrentInsideTemperature
             Debug("Updated InsideTemp At "+str(CurrentMin)+" with "+str(InsideTempAt[CurrentMin]))
-            DeltaKPH = (CurrentInsideTemperature-InsideTempAt[(CurrentMin+45)%60])*4
+            DeltaKPH = (CurrentInsideTemperature-InsideTempAt[(CurrentMin+45)%60])*4  #tempchange the last 15 mins mutltiplied by 4
             Debug("DeltaKPH = "+str(DeltaKPH))
 
             if Devices[PROGRAMSWITCH].nValue==0:

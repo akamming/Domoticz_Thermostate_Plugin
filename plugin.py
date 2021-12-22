@@ -49,6 +49,9 @@ import os
 #Constants
 RequiredInterface=2
 SwitchOffHeatingDelta=1  #Switch off heating is current temp is more than this number of agrees above setpoint
+KP = 30 #Proportaional gain: This is the Multiplier of  the error (e.g. KP=30: 1 degree error will result in 30 degrees change of the pid value)
+KI = 0.01 #Integral Gain: This is the multiplier of the error (e.g. KI=0.01: a 1 degree difference for 10 seconds will result in 0.1 degree change of the integral error (KI*error*duration))
+KD = 2.5 #Derative Gain:  Correction per every Delta K per Hour (e.g. KD=2.5: if the temp rises with 1 K per Hour, the PID will be lowered with 2.5 degrees)
 
 #UnitID's
 ENABLECENTRALHEATING=1
@@ -441,9 +444,6 @@ def GetPidValue(sp, pv, pv_last, dt):
     global DeltaKPH #Delta in Kelvin Per Hour
 
     #sp=setpoint, pv=current temp, pv_last=last temp, dt=duration
-    KP = 30
-    KI = 0.01 #0.02 was org value
-    KD = 2.5 # Correction per every Delta K per Hour
     
     # upper and lower bounds on heater level
     ophi = Devices[MAXBOILERTEMP].nValue

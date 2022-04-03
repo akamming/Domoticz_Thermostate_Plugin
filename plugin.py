@@ -387,6 +387,7 @@ def CalculateBoilerSetPoint():
         TargetTemperatureWithoutCurvature=(20-CurrentOutsideTemperature)/MaxXDelta*MaxYDelta+Devices[BOILERTEMPATPLUS20].nValue
         Curvature=math.sin(math.pi*(20-CurrentOutsideTemperature)/MaxXDelta)*Devices[CURVATURESWITCH].nValue*MaxYDelta/100
         TargetTemperature=Curvature+TargetTemperatureWithoutCurvature
+        Debug("Temp calculated at "+str(TargetTemperature))
 
         #Apply reference room compensation
         Succes,CurrentInsideTemperature=GetTemperature(Parameters["Mode3"])
@@ -569,7 +570,7 @@ def HandleProgram():
                             ESPCommand("command?CentralHeating=on&BoilerTemperature="+str(TargetTemperature))
                         else:
                             #temperature above setpoint, switch off heating
-                            ESPCommand("command?CentralHeating=offBoilerTemperature=0")
+                            ESPCommand("command?CentralHeating=off&BoilerTemperature=0")
                 else:
                     Debug("Thermostat mode")
                     #Manage Heating
@@ -622,7 +623,7 @@ def HandleProgram():
                             ESPCommand("command?CentralHeating=on&BoilerTemperature="+str(TargetTemperature))
                         else:
                             #temperature above setpoint, switch off heating
-                            ESPCommand("command?CentralHeating=offBoilerTemperature=0")
+                            ESPCommand("command?CentralHeating=off&BoilerTemperature=0")
             else:
                 Log("Unknow value of program switch: "+str(Devices[PROGRAMSWITCH].nValue))
     else:

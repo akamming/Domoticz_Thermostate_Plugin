@@ -131,7 +131,7 @@ def UpdateCustomSensor(SensorName,UnitID,Value):
         if not (UnitID in Devices):
             Debug("Creating device "+SensorName)
             Domoticz.Device(Name=SensorName, Unit=UnitID, TypeName="Custom", Used=1).Create()
-        if float(Devices[UnitID].sValue)!=float(Value):
+        if Devices[UnitID].sValue=="" or float(Devices[UnitID].sValue)!=float(Value):
             Devices[UnitID].Update(nValue=0, sValue=str(Value))
             Domoticz.Log("Custom ("+Devices[UnitID].Name+")")
 
@@ -140,7 +140,7 @@ def UpdatePercentageSensor(SensorName,UnitID,Value):
         if not (UnitID in Devices):
             Debug("Creating device "+SensorName)
             Domoticz.Device(Name=SensorName, Unit=UnitID, TypeName="Percentage", Used=1).Create()
-        if float(Devices[UnitID].sValue)!=float(Value):
+        if Devices[UnitID].sValue=="" or float(Devices[UnitID].sValue)!=Value:
             Devices[UnitID].Update(nValue=int(Value), sValue=str(Value))
             Domoticz.Log("Percentage ("+Devices[UnitID].Name+")")
 
@@ -161,24 +161,18 @@ def UpdateSetpoint(SensorName,UnitID,Value):
         if not (UnitID in Devices):
             Debug("Creating device "+SensorName)
             Domoticz.Device(Name=SensorName, Unit=UnitID, Type=242, Subtype=1, Used=1, Image=15).Create()
-        try:
-            if float(Devices[UnitID].sValue)!=float(Value):
-                Devices[UnitID].Update(nValue=int(Value), sValue=str(Value))
-                Domoticz.Log("Setpoint ("+Devices[UnitID].Name+")")
-        except:
-            Domoticz.Log("Error comparing setpoint values")
+        if Devices[UnitID].sValue=="" or float(Devices[UnitID].sValue)!=Value:
+            Devices[UnitID].Update(nValue=int(Value), sValue=str(Value))
+            Domoticz.Log("Setpoint ("+Devices[UnitID].Name+")")
 
 def UpdateTemperatureSensor(SensorName,UnitID,Value):
         #Creating devices in case they aren't there...
         if not (UnitID in Devices):
             Debug("Creating device "+SensorName)
             Domoticz.Device(Name=SensorName, Unit=UnitID, TypeName="Temperature", Used=1).Create()
-        try:
-            if float(Devices[UnitID].sValue)!=float(Value):
-                Devices[UnitID].Update(nValue=int(Value), sValue=str(Value))
-                Domoticz.Log("Temperature ("+Devices[UnitID].Name+")")
-        except:
-            Domoticz.Log("Error updating temperature")
+        if Devices[UnitID].sValue=="" or float(Devices[UnitID].sValue)!=Value:
+            Devices[UnitID].Update(nValue=int(Value), sValue=str(Value))
+            Domoticz.Log("Temperature ("+Devices[UnitID].Name+")")
 
 def UpdatePressureSensor(SensorName,UnitID,Value):
        #Creating devices in case they aren't there...

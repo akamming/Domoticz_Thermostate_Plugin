@@ -11,6 +11,7 @@ My current boiler is end of life and i needed a new one. My current thermostate 
 6. Domoticz timers have much more options than the ones on commerical thermostats
 7. No need for an expensive (also 100+ EUR) outside temperature connected to the boiler (any temperature device in domoticz can be used, so also owm or buienradar)
 8. Full domoticz integration, so heating can be  part of scenes, scripts and other events
+9. Easy switching between modulating thermostat or weather dependent mode
 
 ## Prerequisites
 1. A wemos D1 with domoticz opentherm handler firmware (https://github.com/akamming/esp_domoticz_opentherm_handler)
@@ -51,7 +52,7 @@ If all works well, several devices should have been added to the devices tab and
 ![image](https://user-images.githubusercontent.com/30364409/118477419-f010f380-b70e-11eb-9796-9752f7067d76.png)
     
 2. Then there are additional setpoints you can configure to change the bevaviour
-    - A "Fireplace / Weather Dependent Control": If switched on, the thermostate is in Weather Dependant Mode, meaning the outside temperature and the heating curve determines the temperature of the boiler. If switched off, the plugin will act like a normal thermostat, bringing the room to the right temperature based on interna temperature sensor only.
+    - A "Fireplace / Weather Dependent Control": If switched on, the thermostate is in Weather Dependant Mode, meaning the outside temperature and the heating curve determines the temperature of the boiler. If switched off, the plugin will act like a normal thermostat, bringing the room to the right temperature based on internal temperature sensor only.
     - "Program": a selector in which you can choose wich porgram to run: Off (no programming, only manual), Day (Boiler temperature is based on heating cuver and reference room compensation), Night (Boiler is switched off, unless below night setpoint), Frost Protection (Boiler is switched off, unless temperature below fp setpoint)
     - "Temperature compensation": setting the parameters will make sure that if reference room temperature is below the "setpoint", the boiler temperature is raised with the difference in temperature, multiplied by the "Temperature compensation" setting. E.g. when you want it bo be 20 Celcius, but actual temp is 18 celcius en temperature compensation is set to 5 degrees Celcius, the boiler temperature will be raised with 10 degreees celcius
     - "Day Setpoint", "Night Setpoint", "Frost Protection Setpoint". The setpoint values to aim for in the different pograms
@@ -64,10 +65,10 @@ If all works well, several devices should have been added to the devices tab and
     - "Boiler Setpoint". When the program is Off, you can use this setpoint to manually set the boiler termpature
     - "DHW Setpoint". If you have a SWH system, you can use this setpoint to manually set the water temperature
     - "EnableCentralHeating". When the program is Off, you can use this switch to manually switch on or off the central heating
-    - "EnableCooling", if your system supports: You can use this switch to manually switch on or off cooling
+    - "EnableCooling", if your system supports and the program is set to Off: You can use this switch to manually switch on or off cooling
     - "EnableHotWater", if your system supports: You can use this switch to manually switch on or off the hotwater system
 
-4. And then there is information reported about the boiler: 
+4. And then there is information reported about the boiler (not all sensors are supported by every boiler): 
     - "Central Heating": the reporting of opentherm if central heating is switched on
     - "Cooling": the reporting of opentherm if cooling is switched on
     - "HotWater": The reporting of opentherm if hotwater is switched on

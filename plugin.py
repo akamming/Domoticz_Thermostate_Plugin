@@ -96,6 +96,7 @@ Hostname=""
 DayTimeExtensionTime=120
 Debugging=False
 
+
 #Vars for thermostat function
 LastInsideTemperatureValue=0 #Remember last temp to calc difference
 LastInsideTemperatureTimestamp=0

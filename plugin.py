@@ -179,7 +179,7 @@ def UpdatePressureSensor(SensorName,UnitID,Value):
         if not (UnitID in Devices):
             Debug("Creating device "+SensorName)
             Domoticz.Device(Name=SensorName, Unit=UnitID, TypeName="Pressure", Used=1).Create()
-        if float(Devices[UnitID].sValue)!=float(Value):
+        if Devices[UnitID].sValue=="" or float(Devices[UnitID].sValue)!=float(Value):
             Devices[UnitID].Update(nValue=int(Value), sValue=str(Value))
             Domoticz.Log("Pressure ("+Devices[UnitID].Name+")")
 
@@ -681,7 +681,7 @@ class BasePlugin:
         #if Unit==in {CURVATURESWITCH or Unit==PROGRAMSWITCH:
         if Unit in {CURVATURESWITCH,MINBOILERTEMP,MAXBOILERTEMP,BOILERTEMPATMIN10,BOILERTEMPATPLUS20,SWITCHHEATINGOFFAT,
                 DAYSETPOINT,NIGHTSETPOINT,FROSTPROTECTIONSETPOINT,REFERENCEROOMCOMPENSATION}:
-            if float(Devices[Unit].sValue)!=float(Level):
+            if Devices[Unit].sValue=="" or float(Devices[Unit].sValue)!=float(Level):
                 Devices[Unit].Update(nValue=int(Level), sValue=str(Level))
         elif Unit==PROGRAMSWITCH:
             #Update the switch ;-)

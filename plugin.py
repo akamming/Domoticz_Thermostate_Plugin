@@ -54,7 +54,7 @@ KI = 0.01 #Integral Gain: This is the multiplier of the error (e.g. KI=0.01: a 1
 KD = 2.5 #Derative Gain:  Correction per every Delta K per Hour (e.g. KD=2.5: if the temp rises with 1 K per Hour, the PID will be lowered with 2.5 degrees)
 
 #UnitID's
-ENABLECENTRALHEATING=1
+ENABLECENTRALHEATING=37 #Workaround, should be one when domo issue is fixed
 ENABLEHOTWATER=2
 ENABLECOOLING=3
 CENTRALHEATING=4
@@ -90,6 +90,7 @@ DHWFLOW=33
 OUTSIDETEMPERATURE=34
 FPWD=35
 COOLINGCONTROL=36
+#Enable Central Heating 37 workaround
 
 #Global vars
 Hostname=""

@@ -157,6 +157,19 @@ def UpdateOnOffSensor(SensorName,UnitID,Value):
             Devices[UnitID].Update(nValue=newValue, sValue=str(Value))
             Domoticz.Log("Switch ("+Devices[UnitID].Name+")")
 
+def UpdateDimmer(SensorName,UnitID,nValue,sValue):
+        #Creating devices in case they aren't there...
+        Debug("UpdateDimmer("+SensorName+","+str(UnitID)+","+str(nValue)+","+str(sValue)+")")
+        newValue=0
+        if (nValue.lower()=="on" or nValue.lower()=="yes"):
+            newValue=1
+        if not (UnitID in Devices):
+            Debug("Creating device "+SensorName)
+            Domoticz.Device(Name=SensorName, Unit=UnitID, Type=244,Subtype=62,Switchtype=7,Used=1).Create()
+        Devices[UnitID].Update(nValue=newValue,sValue=str(sValue),Type=244,Subtype=62,Switchtype=7) 
+        Domoticz.Log("Dimmer ("+Devices[UnitID].Name+")")
+
+
 def UpdateSetpoint(SensorName,UnitID,Value):
         #Creating devices in case they aren't there...
         if not (UnitID in Devices):
@@ -195,8 +208,18 @@ def UpdateSensors(data):
 
     #Update Sensors
     if data["OpenThermStatus"]=="OK":
-        UpdateOnOffSensor("CentralHeating",CENTRALHEATING,data["CentralHeating"])
-        UpdateOnOffSensor("HotWater",HOTWATER,data["HotWater"])
+        if data["CentralHeating"]=="on":
+            UpdateDimmer("CentralHeating",CENTRALHEATING,data["CentralHeating"],data["Modulation"])
+        else:
+            UpdateDimmer("CentralHeating",CENTRALHEATING,data["CentralHeating"],0)
+
+        if data["HotWater"]=="on":
+            Debug("HotWater is on, modulation="+str(int(data["Modulation"])))
+            UpdateDimmer("HotWater",HOTWATER,data["HotWater"],int(data["Modulation"]))
+        else:
+            UpdateDimmer("HotWater",HOTWATER,data["HotWater"],"0")
+        #else:
+
         UpdateOnOffSensor("Cooling",COOLING,data["Cooling"])
         UpdateOnOffSensor("Flame",FLAME,data["Flame"])
         UpdateOnOffSensor("Fault",FAULT,data["Fault"])

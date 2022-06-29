@@ -79,7 +79,7 @@ DAYSETPOINT=22
 NIGHTSETPOINT=23
 FROSTPROTECTIONSETPOINT=24
 REFERENCEROOMCOMPENSATION=25
-#DAYTIMEEXTENSION=26  No longer used
+CURRENTHEATINGCOOLINGSTATE=26
 HOLIDAY=27
 DHWCONTROL=28
 THERMOSTATTEMPERATURE=29
@@ -217,10 +217,25 @@ def UpdateSensors(data):
         else:
             UpdateDimmer("HotWater",HOTWATER,data["HotWater"],"0")
     
-        if data["CentralHeating"]=="on":
+        if data["Cooling"]=="on":
             UpdateDimmer("Cooling",COOLING,data["Cooling"],int(data["Modulation"]))
         else:
             UpdateDimmer("Cooling",COOLING,data["Cooling"],"0")
+
+        #Update Heating Cooling State
+        level=0
+        if data["CentralHeating"]=="on":
+            level=10
+        elif  data["Cooling"]=="on":
+            level=20
+        else:
+            Debug("Heating Cooling set to 0, Centralheating is "+data["CentralHeating"]+", Cooling is "+data["Cooling"]) 
+
+        Options = {"LevelActions": "|| ||", 
+                "LevelNames": "Off|Heating|Cooling",
+                "LevelOffHidden": "false",
+                "SelectorStyle": "0"}
+        Devices[CURRENTHEATINGCOOLINGSTATE].Update(nValue=int(level), sValue=str(level), TypeName="Selector Switch", Options=Options)
 
         UpdateOnOffSensor("Flame",FLAME,data["Flame"])
         UpdateOnOffSensor("Fault",FAULT,data["Fault"])
@@ -267,6 +282,16 @@ def CreateProgramSwitch():
                    "LevelOffHidden": "false",
                    "SelectorStyle": "0"}
         Domoticz.Device(Name="Program", Unit=PROGRAMSWITCH, TypeName="Selector Switch", Options=Options, Used=1).Create()
+
+def CreateHeatingCoolingSwitch():
+    if not (CURRENTHEATINGCOOLINGSTATE in Devices):
+        Debug("Creating Heating Cooling switch")
+        Options = {"LevelActions": "|| ||", 
+                   "LevelNames": "Off|Heating|Cooling",
+                   "LevelOffHidden": "false",
+                   "SelectorStyle": "0"}
+        Domoticz.Device(Name="Heating Cooling State", Unit=CURRENTHEATINGCOOLINGSTATE, TypeName="Selector Switch", Options=Options, Used=1).Create()
+
 
 def CreateOnOffSwitch(SensorName,UnitID):
        #Creating devices in case they aren't there...

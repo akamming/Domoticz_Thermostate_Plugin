@@ -31,8 +31,9 @@ My current boiler is end of life and i needed a new one. My current thermostate 
     - browser to http://192.168.4.1 
     - follow instructions to connect the ESP to correct WiFi network
 5. install this plugin into domoticz by     
-   - cd <your domoticzdir>/plugins
-   - git clone https://github.com/akamming/Domoticz_Thermostate_Plugin
+   - cd your_domoticz_dit/plugins
+   - download the release from the "releases" link, unzip the .zip in a new directory to your liking
+   - or if you want alway want to have the latest updates: instead of downloading the release download directly from the reposity with "git clone https://github.com/akamming/Domoticz_Thermostate_Plugin/"   (later you can do git pull to get the latest updates) 
    - restart domoticz
    - go to hardware page. The plugin (Weather Dependent Heating Control) should now be visible in the "Type" dropdown
 6. select the plugin, and enter the following config:
@@ -110,5 +111,5 @@ Wheter your home heating will be comfortable without generating too much gas use
 If you would like to build extra features in this plugin, feel free to do so, just as long as you make PR's, so other users can benefit from your contributions as well
 
 ## Testing
-At the moment of writing my opentherm interface was  just delivered, so everything is tested, but but just for a few days against a real boiler, doing up experience right now ;-)
-
+Heating: i only have 1 type of boiler in my home ;-) it was replaced recently so i know it works on both boilers. But you have to check if it works with your boiler.
+Cooling: I don't have a cooling system myself, so i could test the correct commands are sent to opentherm, but i could not check if it really works. Let me know if it does!

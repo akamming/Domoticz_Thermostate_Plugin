@@ -213,13 +213,15 @@ def UpdateSensors(data):
             UpdateDimmer("CentralHeating",CENTRALHEATING,data["CentralHeating"],0)
 
         if data["HotWater"]=="on":
-            Debug("HotWater is on, modulation="+str(int(data["Modulation"])))
             UpdateDimmer("HotWater",HOTWATER,data["HotWater"],int(data["Modulation"]))
         else:
             UpdateDimmer("HotWater",HOTWATER,data["HotWater"],"0")
-        #else:
+    
+        if data["CentralHeating"]=="on":
+            UpdateDimmer("Cooling",COOLING,data["Cooling"],int(data["Modulation"]))
+        else:
+            UpdateDimmer("Cooling",COOLING,data["Cooling"],"0")
 
-        UpdateOnOffSensor("Cooling",COOLING,data["Cooling"])
         UpdateOnOffSensor("Flame",FLAME,data["Flame"])
         UpdateOnOffSensor("Fault",FAULT,data["Fault"])
         UpdateOnOffSensor("Diagnostic",DIAGNOSTIC,data["Diagnostic"])

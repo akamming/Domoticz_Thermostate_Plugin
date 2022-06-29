@@ -113,3 +113,10 @@ If you would like to build extra features in this plugin, feel free to do so, ju
 ## Testing
 Heating: i only have 1 type of boiler in my home ;-) it was replaced recently so i know it works on both boilers. But you have to check if it works with your boiler.
 Cooling: I don't have a cooling system myself, so i could test the correct commands are sent to opentherm, but i could not check if it really works. Let me know if it does!
+
+## Rel 2 important notes
+Some changes in the sensors to enable homekit (in combination with the homebridge plugin) compatibility
+- The behaviour of the program switch changed from Off/Day/Night/Frostprotection to Off/Heating/Cooling/Auto 
+- The Night Setpoint is gone, 
+- a new selector switch (heating/cooling/off) was introduced to indicate whether the system is heating, cooling or off 
+so if you created rules or macro's make sure they are changed as well when installing this release

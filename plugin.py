@@ -408,13 +408,14 @@ def CalculateBoilerSetPoint():
 
     #Check if we are in thermostat or Weather dependent mode
     if Devices[FPWD].nValue==0:
+        Debug("Calculate temperature using Thermostat (PID) mode")
         Duration=time.time()-LastInsideTemperatureTimestamp
-        #TargetTemperature = GetPidValue(CurrentSetpoint, CurrentInsideTemperature, LastInsideTemperatureValue, Duration)
         TargetTemperature = GetPidValue(CurrentSetpoint, CurrentInsideTemperature, LastInsideTemperatureValue, 10)
 
         #Return Correct Values
         return True,TargetTemperature
     else:
+        Debug("Calculate Boiler temp using FPWD (based on outside temop) mode")
         MaxYDelta=Devices[BOILERTEMPATMIN10].nValue-Devices[BOILERTEMPATPLUS20].nValue #boilertemp at -10 minus boilertemp at +20
         MaxXDelta=30 # 20 - (-10)=30
 
@@ -598,25 +599,15 @@ def HandleProgram():
                         Log("Switching off DHW")
                         ESPCommand("command?HotWater=off")
                 #Manage Heating
-                if Devices[FPWD].nValue==1:
-                    Debug("Weather Dependent Mode")
-                    if CurrentInsideTemperature<=Devices[FROSTPROTECTIONSETPOINT].nValue:
-                        #temperature too low, make sure there is heating
-                        ESPCommand("command?CentralHeating=on&Cooling=Off&BoilerTemperature="+str(TargetTemperature))
-                    else:
-                        #temperature above setpoint, switch off heating
-                        ESPCommand("command?CentralHeating=off&Cooling=Off&BoilerTemperature=0")
+                if CurrentInsideTemperature<=Devices[FROSTPROTECTIONSETPOINT].nValue:
+                    Debug("temperature below frostprotection setpoint, make sure there is heating")
+                    ESPCommand("command?CentralHeating=on&Cooling=Off&BoilerTemperature="+str(TargetTemperature))
                 else:
-                    Debug("Thermostat mode")
-                    #Manage Heating
-                    if CurrentInsideTemperature>Devices[FROSTPROTECTIONSETPOINT].nValue+SwitchOffHeatingDelta:
-                        Debug("Inside temp too much above setpoint, switching or leaving off heating")
-                        ESPCommand("command?CentralHeating=off&Cooling=Off&BoilerTemperature=0")
-                    else:
-                        Debug("Heating boiler temp to "+str(TargetTemperature))
-                        ESPCommand("command?CentralHeating=on&Cooling=Off&BoilerTemperature="+str(TargetTemperature))
+                    Debug("temperature above frost protection setpoint, switch off heating")
+                    ESPCommand("command?CentralHeating=off&Cooling=Off&BoilerTemperature=0")
     else:
-        Log("No temperatures returned from calculateboilersetpoint, could not execute program")
+        Log("No temperatures returned from calculateboilersetpoint, could not execute program, updating sensors")
+        getSensors()
 
 class BasePlugin:
     enabled = False
@@ -750,13 +741,8 @@ class BasePlugin:
             DeltaKPH = (CurrentInsideTemperature-InsideTempAt[(CurrentMin+45)%60])*4  #tempchange the last 15 mins mutltiplied by 4
             Debug("DeltaKPH = "+str(DeltaKPH))
 
-            if Devices[PROGRAMSWITCH].nValue==0:
-                #Program inactive, just get sensors
-                Debug("Program inactive")
-                getSensors()
-            else:
-                #Handling the program
-                HandleProgram()
+            #Handle Program
+            HandleProgram()
         else:
             Debug("Do nothing: Unable to get temperatures")
             getSensors()

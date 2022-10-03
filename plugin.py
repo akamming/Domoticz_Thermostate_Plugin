@@ -563,14 +563,14 @@ def HandleProgram():
                         Debug("HEATING: Setting boiler temp to "+str(TargetTemperature))
                         ESPCommand("command?CentralHeating=on&Cooling=Off&BoilerTemperature="+str(TargetTemperature))
                     else:
-                        Debug("Switching off heating ")
+                        Debug("HEATING: Switching off heating ")
                         ESPCommand("command?CentralHeating=off&Cooling=Off&BoilerTemperature=0")
                 elif Devices[PROGRAMSWITCH].nValue==20: #COOLING
                     if TargetTemperature<CurrentInsideTemperature: 
                         Debug("COOLING: Setting water temp to "+str(TargetTemperature))
                         ESPCommand("command?CentralHeating=off&Cooling=On&BoilerTemperature="+str(TargetTemperature))
                     else:
-                        Debug("Switching off Cooling")
+                        Debug("COOLING: Switching off Cooling")
                         ESPCommand("command?CentralHeating=off&Cooling=Off&BoilerTemperature=0")
                 elif Devices[PROGRAMSWITCH].nValue==30: #AUTO
                     if TargetTemperature>CurrentInsideTemperature: 
@@ -704,6 +704,7 @@ class BasePlugin:
                 LastInsideTemperatureTimestamp=time.time()
                 if Succes:
                     ierr=LastInsideTemperatureValue  #Better starting point for ierr
+
         elif Unit==ENABLECENTRALHEATING:
             if Command.lower()=="on":
                 ESPCommand("command?CentralHeating=on")
@@ -725,6 +726,11 @@ class BasePlugin:
             ESPCommand("command?DHWTemperature="+str(Level))
         else: 
             Log("Unhandled command")
+
+        #handle program if needed
+        if Devices[PROGRAMSWITCH].nValue!=0:
+            #Handling the program
+            HandleProgram()
 
     def onNotification(self, Name, Subject, Text, Status, Priority, Sound, ImageFile):
         Debug("Notification: " + Name + "," + Subject + "," + Text + "," + Status + "," + str(Priority) + "," + Sound + "," + ImageFile)

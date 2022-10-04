@@ -97,10 +97,6 @@ Hostname=""
 Debugging=False
 
 #Vars for thermostat function
-LastInsideTemperatureValue=0 #Remember last temp to calc difference
-LastInsideTemperatureTimestamp=0
-SecondLastInsideTemperatureValue=0
-SecondLastInsideTemperatureTimestamp=0
 DeltaKPH=0 # Calculate change in temperature in Kelvin per hour
 CurrentInsideTemperature=0
 CurrentOutsideTemperature=0
@@ -354,10 +350,6 @@ def getSensors():
     ESPCommand("GetSensors")
 
 def UpdateTemperatures():
-    global LastInsideTemperatureValue
-    global LastInsideTemperatureTimestamp
-    global SecondLastInsideTemperatureValue
-    global SecondLastInsideTemperatureTimestamp
     global CurrentInsideTemperature
     global CurrentOutsideTemperature
     global CurrentSetpoint
@@ -380,26 +372,9 @@ def UpdateTemperatures():
 
     #Get Inside Temperature
     Succes,CurrentInsideTemperature=GetTemperature(Parameters["Mode3"])
-    if Succes:
-        if CurrentInsideTemperature!=LastInsideTemperatureValue:
-            Debug ("SecondLastInsideTemperatureTimestamp="+str(SecondLastInsideTemperatureTimestamp))
-            if SecondLastInsideTemperatureTimestamp==0: ## if 0, then needs to be initialised
-                SecondLastInsideTemperatureValue=CurrentInsideTemperature
-                SecondLastInsideTemperatureTimestamp=time.time()
-            else:
-                SecondLastInsideTemperatureValue=LastInsideTemperatureValue
-                SecondLastInsideTemperatureTimestamp=LastInsideTemperatureTimestamp
-            LastInsideTemperatureValue=CurrentInsideTemperature
-            LastInsideTemperatureTimestamp=time.time()
-    else:
+    if not Succes:
         Log("Failed to get inside temperature")
         ReturnValue=False
-
-    Debug("Current Temp = "+str(CurrentInsideTemperature))
-    Debug("Last: temp was "+str(LastInsideTemperatureValue)+" at "+time.asctime( time.localtime(LastInsideTemperatureTimestamp))) 
-    Debug("SecondLast: temp was "+str(SecondLastInsideTemperatureValue)+" at "+time.asctime( time.localtime(SecondLastInsideTemperatureTimestamp)))
-
-
 
     return ReturnValue
     
@@ -638,8 +613,6 @@ class BasePlugin:
         global Hostname
         global OutsideTemperatureIdx
         global InsideTemperatureIdx
-        global LastInsideTemperatureValue
-        global LastInsideTemperatureTimestamp
         global ierr
         global InsideTempAt
 
@@ -660,10 +633,10 @@ class BasePlugin:
         UpdateTemperatures()
 
         #Initialise ierr
-        ierr=LastInsideTemperatureValue  
+        ierr=CurrentInsideTemperature  
 
         #initialise InsideTempAt array
-        InsideTempAt = [LastInsideTemperatureValue for i in range(60)]
+        InsideTempAt = [CurrentInsideTemperature for i in range(60)]
 
     def onStop(self):
         Debug("onStop called")
@@ -675,8 +648,6 @@ class BasePlugin:
         Debug("onMessage called")
 
     def onCommand(self, Unit, Command, Level, Hue):
-        global LastInsideTemperatureValue
-        global LastInsideTemperatureTimestamp
         global ierr
         global LastPIDCalcTimestamp
 
@@ -696,10 +667,9 @@ class BasePlugin:
             if Devices[Unit].nValue==0: 
                 ESPCommand("command?BoilerTemperature=0&CentralHeating=off&Cooling=off")
             #Reset Thermostat Global Values to give fresh start to new program mode
-            Succes,LastInsideTemperatureValue=GetTemperature(Parameters["Mode3"])
-            LastInsideTemperatureTimestamp=time.time()
+            Succes,CurrentInsideTemperature=GetTemperature(Parameters["Mode3"])
             if Succes:
-                ierr=LastInsideTemperatureValue  #Better starting point for ierr
+                ierr=CurrentInsideTemperature  #Better starting point for ierr
 
         elif Unit in {HOLIDAY,DHWCONTROL,FPWD}:
             #Handle Switch
@@ -711,10 +681,9 @@ class BasePlugin:
             #If FirePlace/WeatherDependent switch was set: reset thermostat vars
             if (Unit==FPWD and Command=="Off"):
                 #Reset Thermostat Values
-                Succes,LastInsideTemperatureValue=GetTemperature(Parameters["Mode3"])
-                LastInsideTemperatureTimestamp=time.time()
+                Succes,CurrentInsideTemperature=GetTemperature(Parameters["Mode3"])
                 if Succes:
-                    ierr=LastInsideTemperatureValue  #Better starting point for ierr
+                    ierr=CurrentInsideTemperature  #Better starting point for ierr
 
         elif Unit==ENABLECENTRALHEATING:
             if Command.lower()=="on":

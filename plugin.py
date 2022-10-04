@@ -496,7 +496,7 @@ def GetPidValue(sp, pv, pv_last, dt):
     error = sp - pv;
     
     # calculate the measurement derivative
-    dpv = (pv - pv_last) / dt
+    #dpv = (pv - pv_last) / dt
     
     # calculate the PID output
     P = KP * error #proportional contribution
@@ -518,15 +518,27 @@ def GetPidValue(sp, pv, pv_last, dt):
 
 
     #Debug("Boiler setpoint : "+str(Devices[BOILERSETPOINT].sValue))
-    if Devices[PROGRAMSWITCH].nValue==10 or Devices[PROGRAMSWITCH].nValue==0:
-        if op<float(Devices[BOILERSETPOINT].sValue) and float(Devices[BOILERSETPOINT].sValue)<CurrentInsideTemperature:
-            Debug("Not updating I Value")
+    if Devices[PROGRAMSWITCH].nValue==10:
+        Debug("Heating is on")
+        Debug(str(op)+"<"+Devices[BOILERSETPOINT].sValue+"<"+str(CurrentInsideTemperature))
+        if op<float(Devices[BOILERSETPOINT].sValue) and float(Devices[BOILERSETPOINT].sValue)<CurrentInsideTemperature:  #if op is dropping and and setpoint already below inside temperature
+            Debug("Not updating I Value: Boiler setpoint goes down during heating, while setpoint already below current inside temperature")
+        else:
+            Debug("Udating I")
+            ierr = I
+    elif Devices[PROGRAMSWITCH].nValue==20:
+        Debug("Cooling is on")
+        if op>float(Devices[BOILERSETPOINT].sValue) and float(Devices[BOILERSETPOINT].sValue)>CurrentInsideTemperature:  #if op is rising  and and setpoint already above inside temperature
+            Debug("Not updating I Value: Boiler setpoint goes up during cooling, while setpoint already above current inside temperature")
         else:
             ierr = I
+    elif Devices[PROGRAMSWITCH].nValue==30:
+        Debug("Auto is on")
+        ierr = I
     else: 
-        Debug("Cooling is on")
+        Debug("Program switched off")
 
-    Debug("Import;sp=" + str(sp) + ";pv(setpoint)=" + str(pv) + ";dt(delta time)=" + str(dt) + ";op(PID)=" + str(op) + ";P=" + str(P) + ";I=" + str(I) + ";D=" + str(D))
+    Debug("Import;sp(setpoint)=" + str(sp) + ";pv(current value)=" + str(pv) + ";dt(delta time)=" + str(dt) + ";op(PID)=" + str(op) + ";P=" + str(P) + ";I=" + str(I) + ";D=" + str(D))
     return op
 
 def CheckDebug():
@@ -565,14 +577,14 @@ def HandleProgram():
                         ESPCommand("command?CentralHeating=on&Cooling=Off&BoilerTemperature="+str(TargetTemperature))
                     else:
                         Debug("HEATING: Switching off heating ")
-                        ESPCommand("command?CentralHeating=off&Cooling=Off&BoilerTemperature=0")
+                        ESPCommand("command?CentralHeating=off&Cooling=Off&BoilerTemperature="+str(TargetTemperature))
                 elif Devices[PROGRAMSWITCH].nValue==20: #COOLING
                     if TargetTemperature<CurrentInsideTemperature: 
                         Debug("COOLING: Setting water temp to "+str(TargetTemperature))
                         ESPCommand("command?CentralHeating=off&Cooling=On&BoilerTemperature="+str(TargetTemperature))
                     else:
                         Debug("COOLING: Switching off Cooling")
-                        ESPCommand("command?CentralHeating=off&Cooling=Off&BoilerTemperature=0")
+                        ESPCommand("command?CentralHeating=off&Cooling=Off&BoilerTemperature="+str(TargetTemperature))
                 elif Devices[PROGRAMSWITCH].nValue==30: #AUTO
                     if TargetTemperature>CurrentInsideTemperature: 
                         Debug("AUTO: HEATING: Setting boiler temp to "+str(TargetTemperature))

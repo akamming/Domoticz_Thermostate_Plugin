@@ -483,7 +483,7 @@ def GetTemperature(TemperatureDeviceIDX):
         return False,0
 
 def GetPidValue(sp, pv, pv_last, dt):
-    global ierr,CurrentInsideTemperature
+    global ierr
     global DeltaKPH #Delta in Kelvin Per Hour
 
     #sp=setpoint, pv=current temp, pv_last=last temp, dt=duration
@@ -521,14 +521,14 @@ def GetPidValue(sp, pv, pv_last, dt):
     if Devices[PROGRAMSWITCH].nValue==10:
         Debug("Heating is on")
         Debug(str(op)+"<"+Devices[BOILERSETPOINT].sValue+"<"+str(CurrentInsideTemperature))
-        if op<float(Devices[BOILERSETPOINT].sValue) and float(Devices[BOILERSETPOINT].sValue)<CurrentInsideTemperature:  #if op is dropping and and setpoint already below inside temperature
+        if op<float(Devices[BOILERSETPOINT].sValue) and float(Devices[BOILERSETPOINT].sValue)<pv:  #if op is dropping and and setpoint already below inside temperature
             Debug("Not updating I Value: Boiler setpoint goes down during heating, while setpoint already below current inside temperature")
         else:
             Debug("Udating I")
             ierr = I
     elif Devices[PROGRAMSWITCH].nValue==20:
         Debug("Cooling is on")
-        if op>float(Devices[BOILERSETPOINT].sValue) and float(Devices[BOILERSETPOINT].sValue)>CurrentInsideTemperature:  #if op is rising  and and setpoint already above inside temperature
+        if op>float(Devices[BOILERSETPOINT].sValue) and float(Devices[BOILERSETPOINT].sValue)>pv:  #if op is rising  and and setpoint already above inside temperature
             Debug("Not updating I Value: Boiler setpoint goes up during cooling, while setpoint already above current inside temperature")
         else:
             ierr = I

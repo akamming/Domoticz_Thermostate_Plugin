@@ -106,6 +106,7 @@ CurrentInsideTemperature=0
 CurrentOutsideTemperature=0
 CurrentSetpoint=0
 InsideTempAt=[] #Remember the inside temp the last hour
+LastPIDCalcTimestamp=0 #remember last PID Calculation
 
 ierr = 0 #Remember Integral Error
 
@@ -409,8 +410,7 @@ def CalculateBoilerSetPoint():
     #Check if we are in thermostat or Weather dependent mode
     if Devices[FPWD].nValue==0:
         Debug("Calculate temperature using Thermostat (PID) mode")
-        Duration=time.time()-LastInsideTemperatureTimestamp
-        TargetTemperature = GetPidValue(CurrentSetpoint, CurrentInsideTemperature, LastInsideTemperatureValue, 10)
+        TargetTemperature = GetPidValue(CurrentSetpoint, CurrentInsideTemperature)
 
         #Return Correct Values
         return True,TargetTemperature
@@ -482,12 +482,19 @@ def GetTemperature(TemperatureDeviceIDX):
         Log("error getting temperature from domoticz device with idx"+str(TemperatureDeviceIDX))
         return False,0
 
-def GetPidValue(sp, pv, pv_last, dt):
+def GetPidValue(sp, pv):
     global ierr
     global DeltaKPH #Delta in Kelvin Per Hour
+    global LastPIDCalcTimestamp
 
-    #sp=setpoint, pv=current temp, pv_last=last temp, dt=duration
-    
+    #calculate duration. Limit to max 10 secs (which might be the case if the program was suspended)
+    dt=time.time()-LastPIDCalcTimestamp
+    if dt>10:
+        dt=10
+
+    Debug("Elapsed time since last PID Calc = "+str(dt))
+    LastPIDCalcTimestamp=time.time() # reset timestamp
+
     # upper and lower bounds on heater level
     ophi = Devices[MAXBOILERTEMP].nValue
     oplo = Devices[MINBOILERTEMP].nValue
@@ -671,6 +678,7 @@ class BasePlugin:
         global LastInsideTemperatureValue
         global LastInsideTemperatureTimestamp
         global ierr
+        global LastPIDCalcTimestamp
 
         Debug("onCommand called for Unit " + str(Unit) + ": Parameter '" + str(Command) + "', Level: " + str(Level))
         if Unit in {CURVATURESWITCH,MINBOILERTEMP,MAXBOILERTEMP,BOILERTEMPATMIN10,BOILERTEMPATPLUS20,SWITCHHEATINGOFFAT,

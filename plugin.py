@@ -531,7 +531,7 @@ def CheckDebug():
         Debugging=True
         Log("File "+str(Parameters["HomeFolder"])+"DEBUG"+" exists, switched on Debug mode")
     else:
-        Log("File "+str(Parameters["HomeFolder"])+"DEBUG"+" does not exist, switching off Debug mode")
+        Debug("File "+str(Parameters["HomeFolder"])+"DEBUG"+" does not exist, switching off Debug mode")
         Debugging=False #True/False
 
 def HandeBoilerTemperature(targetTemperature,currentInsideTemperature,currentOutsideTemperature):

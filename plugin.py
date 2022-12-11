@@ -349,7 +349,7 @@ def ESPCommand(url):
 def getSensors():
     ESPCommand("GetSensors")
 
-def UpdateTemperatures():
+def GetDeviceValues():
     global CurrentInsideTemperature
     global CurrentOutsideTemperature
     global CurrentSetpoint
@@ -443,8 +443,9 @@ def DomoticzAPI(APICall):
                 resultJson = None
         else:
             Domoticz.Error("Domoticz API: http error = {}".format(response.status))
-    except:
+    except Exception as e:
         Domoticz.Error("Error calling '{}'".format(url))
+        Domoticz.Error("Exception :{}".format(e))
     return resultJson
 
 def GetTemperature(TemperatureDeviceIDX):
@@ -533,9 +534,6 @@ def CheckDebug():
     else:
         Debug("File "+str(Parameters["HomeFolder"])+"DEBUG"+" does not exist, switching off Debug mode")
         Debugging=False #True/False
-
-def HandeBoilerTemperature(targetTemperature,currentInsideTemperature,currentOutsideTemperature):
-    Debug("HandleBoilerTemperature")
 
 def HandleProgram():
     Succes,TargetTemperature=CalculateBoilerSetPoint()
@@ -629,8 +627,8 @@ class BasePlugin:
         #Update Devices
         getSensors()
 
-        #Init Thermostat Values
-        UpdateTemperatures()
+        #Read Domoticz Devices
+        GetDeviceValues()
 
         #Initialise ierr
         ierr=CurrentInsideTemperature  
@@ -728,7 +726,7 @@ class BasePlugin:
         #Make sure all params are there so the user can control the program..
         CreateParameters()
 
-        if (UpdateTemperatures()):
+        if (GetDeviceValues()):
             #Update History
             CurrentMin=int((time.time() % 3600) / 60)
             InsideTempAt[CurrentMin]=CurrentInsideTemperature

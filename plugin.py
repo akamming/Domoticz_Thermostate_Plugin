@@ -595,6 +595,18 @@ def HandleProgram():
         Log("No temperatures returned from calculateboilersetpoint, could not execute program, updating sensors")
         getSensors()
 
+def getConfig():
+    global KP,KI,KD
+
+    try:
+        PID=Parameters["Mode3"].split(",")
+        KP=float(PID[0])
+        KI=float(PID[1])
+        KD=float(PID[2])
+    except Exception as e:
+        Domoticz.Error("Exception :{}".format(e))
+
+
 class BasePlugin:
     enabled = False
     def __init__(self):
@@ -609,6 +621,14 @@ class BasePlugin:
         global InsideTempAt
 
         CheckDebug()  #Check if we have to enable debugging
+
+        #Get Pid parameters
+        getPIDparameters()
+        Debug("P set to "+str(KP))
+        Debug("I set to "+str(KI))
+        Debug("D set to "+str(KD))
+
+
 
         # Read config
         #for  x in Parameters:

@@ -14,7 +14,6 @@
         Please fill the following coordinates to make this plugin work<br/>
         <ul style="list-style-type:square">
             <li>Domticz IP adress and port (the default should work on a standard domoticz config)</li>
-            <li>IP adress or hostname from the Wemos D1 containing the domoticz opentherm handler (the default should work on a standard network config)</li>
             <li>the IDX values of your outdoor and indoor temperature devices</li>
             <li>The number of minutes the "Daytime Extension" button should be active when pressed</li>
         </ul>
@@ -24,9 +23,8 @@
         <param field="Port" label="Domoticz Port" width="40px" required="true" default="8080"/>
         <param field="Username" label="Domoticz Username" width="200px" required="false" default=""/>
         <param field="Password" label="Domoticz Password" width="200px" required="false" default=""/>
-        <param field="Mode1" label="ESP Hostname" default="domesphelper.local" width="200px" required="true"  />
-        <param field="Mode2" label="idx for outside temperature device" default="514" width="100px" required="true" />
-        <param field="Mode3" label="idx for reference room temperature device" default="685" width="100px" required="true" />
+        <param field="Mode2" label="comma seperated idx numers for Insidetemperature, OutsideTemperature, HeatingActive, CoolingActive, EnableHeating, EnableCooling, BoilerSetpoint" default="1,2,3,4,5,6,7" width="100px" required="true" />
+        <param field="Mode3" label="P,I and D value (comma separated)" default="30,0.01,2.5" width="100px" required="true" />
         <param field="Mode4" label="Daytime Extension Time in minutes" default="120" required="true" />
     </params>
 </plugin>
@@ -41,10 +39,6 @@ import urllib.request as request
 import base64 
 import math
 import os
-
-#TODO: 
-# Switch off heating only when in FP/WD mode
-# Refactor code for WDP and MOdulating Thermostat mode
 
 #Constants
 RequiredInterface=2

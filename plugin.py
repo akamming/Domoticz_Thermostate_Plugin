@@ -43,9 +43,18 @@ import os
 #Constants
 RequiredInterface=2
 SwitchOffHeatingDelta=1  #Switch off heating is current temp is more than this number of agrees above setpoint
+
+#Config
 KP = 30 #Proportaional gain: This is the Multiplier of  the error (e.g. KP=30: 1 degree error will result in 30 degrees change of the pid value)
 KI = 0.01 #Integral Gain: This is the multiplier of the error (e.g. KI=0.01: a 1 degree difference for 10 seconds will result in 0.1 degree change of the integral error (KI*error*duration))
 KD = 2.5 #Derative Gain:  Correction per every Delta K per Hour (e.g. KD=2.5: if the temp rises with 1 K per Hour, the PID will be lowered with 2.5 degrees)
+InsideTemperatureIDX=0;
+OutsideTemperatureIDX=0;
+HeatingActiveIDX=0;
+CoolingActiveIDX=0;
+EnableHeatingIDX=0;
+EnableCoolingIDX=0;
+BoilerSetpointIDX=0;
 
 #UnitID's
 ENABLECENTRALHEATING=37 #Workaround, should be one when domo issue is fixed
@@ -94,6 +103,8 @@ Debugging=False
 DeltaKPH=0 # Calculate change in temperature in Kelvin per hour
 CurrentInsideTemperature=0
 CurrentOutsideTemperature=0
+CurrentHeatingActive=False
+CurrentCoolingActive=False
 CurrentSetpoint=0
 InsideTempAt=[] #Remember the inside temp the last hour
 LastPIDCalcTimestamp=0 #remember last PID Calculation
@@ -359,13 +370,13 @@ def GetDeviceValues():
         CurrentSetpoint=float(Devices[FROSTPROTECTIONSETPOINT].sValue)
 
     #Get Outside Temperature
-    Succes,CurrentOutsideTemperature=GetTemperature(Parameters["Mode2"])
+    Succes,CurrentOutsideTemperature=GetTemperature(OutsideTemperatureIDX)
     if not Succes:
         Log("Failed to get outside temperature")
         ReturnValue=False
 
     #Get Inside Temperature
-    Succes,CurrentInsideTemperature=GetTemperature(Parameters["Mode3"])
+    Succes,CurrentInsideTemperature=GetTemperature(InsideTemperatureIDX)
     if not Succes:
         Log("Failed to get inside temperature")
         ReturnValue=False
@@ -597,12 +608,25 @@ def HandleProgram():
 
 def getConfig():
     global KP,KI,KD
+    global InsideTemperatureIDX,OutsideTemperatureIDX,HeatingActiveIDX,CoolingActiveIDX,EnableHeatingIDX,EnableCoolingIDX,BoilerSetpointIDX
 
     try:
+        # PID Parameters
         PID=Parameters["Mode3"].split(",")
         KP=float(PID[0])
         KI=float(PID[1])
         KD=float(PID[2])
+
+        #IDX numbers
+        IDX=Parameters["Mode2"].split(",")
+        InsideTemperatureIDX=int(IDX[0])
+        OutsideTemperatureIDX=int(IDX[1])
+        HeatingActiveIDX=int(IDX[2])
+        EnableHeatingIDX=int(IDX[3])
+        CoolingActiveIDX=int(IDX[4])
+        EnableCoolingIDX=int(IDX[5])
+        BoilerSetpointIDX=int(IDX[6])
+
     except Exception as e:
         Domoticz.Error("Exception :{}".format(e))
 
@@ -623,7 +647,7 @@ class BasePlugin:
         CheckDebug()  #Check if we have to enable debugging
 
         #Get Pid parameters
-        getPIDparameters()
+        getConfig()
         Debug("P set to "+str(KP))
         Debug("I set to "+str(KI))
         Debug("D set to "+str(KD))

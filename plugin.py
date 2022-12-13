@@ -23,7 +23,7 @@
         <param field="Port" label="Domoticz Port" width="40px" required="true" default="8080"/>
         <param field="Username" label="Domoticz Username" width="200px" required="false" default=""/>
         <param field="Password" label="Domoticz Password" width="200px" required="false" default=""/>
-        <param field="Mode2" label="comma seperated idx numers for Insidetemperature, OutsideTemperature, HeatingActive, CoolingActive, EnableHeating, EnableCooling, BoilerSetpoint" default="1,2,3,4,5,6,7" width="100px" required="true" />
+        <param field="Mode2" label="comma seperated idx numers for Insidetemperature, OutsideTemperature, HeatingActive, CoolingActive, EnableHeating, EnableCooling, BoilerSetpoint" default="1,2,3,4,5,6,7" width="200px" required="true" />
         <param field="Mode3" label="P,I and D value (comma separated)" default="30,0.01,2.5" width="100px" required="true" />
         <param field="Mode4" label="Daytime Extension Time in minutes" default="120" required="true" />
     </params>
@@ -308,6 +308,7 @@ def CreateParameters():
     CreateSetPoint("Minimum Boiler Temperature",MINBOILERTEMP,20)
     CreateSetPoint("SwitchHeatingOffAt",SWITCHHEATINGOFFAT,17)
     CreateProgramSwitch()
+    CreateHeatingCoolingSwitch()
     CreateCurvatureSwitch()
     CreateSetPoint("Day Setpoint",DAYSETPOINT,20)
     CreateSetPoint("Night Setpoint",NIGHTSETPOINT,15)
@@ -357,6 +358,8 @@ def getSensors():
 def GetDeviceValues():
     global CurrentInsideTemperature
     global CurrentOutsideTemperature
+    global CurrentCoolingActive
+    global CurrentHeatingActive
     global CurrentBoilerSetpoint
     global CurrentSetpoint
     
@@ -382,11 +385,41 @@ def GetDeviceValues():
         Log("Failed to get inside temperature")
         ReturnValue=False
     
-    #Get Inside Temperature
+    #Get BoilerSetpoint
     Succes,CurrentBoilerSetpoint=GetSetpoint(BoilerSetpointIDX)
     if not Succes:
         Log("Failed to get Current Boiler Setpoint value")
         ReturnValue=False
+    
+    #Get HeatingActive 
+    Succes,CurrentHeatingActive=GetSwitchState(HeatingActiveIDX)
+    if not Succes:
+        Log("Failed to get Current HeatingActive value")
+        ReturnValue=False
+    
+    #Get CoolingActive 
+    Succes,CurrentCoolingActive=GetSwitchState(CoolingActiveIDX)
+    if not Succes:
+        Log("Failed to get Current CoolingActive value")
+        ReturnValue=False
+
+    if ReturnValue: #Update Heating Cooling State if we have everything
+        level=0
+        if CurrentHeatingActive:
+            level=10
+        elif  CurrentCoolingActive:
+            level=20
+        else:
+            Debug("Heating Cooling set to 0, Centralheating is "+str(CurrentHeatingActive)+", Cooling is "+str(CurrentCoolingActive)) 
+
+        Options = {"LevelActions": "|| ||", 
+                "LevelNames": "Off|Heating|Cooling",
+                "LevelOffHidden": "false",
+                "SelectorStyle": "0"}
+        if Devices[CURRENTHEATINGCOOLINGSTATE].nValue==level:
+            Debug("Not updateing HEating cooling state, already at level "+str(level))
+        else:
+            Devices[CURRENTHEATINGCOOLINGSTATE].Update(nValue=int(level), sValue=str(level), TypeName="Selector Switch", Options=Options)
 
     return ReturnValue
     
@@ -474,10 +507,23 @@ def GetSetpoint(SetpointDeviceIDX):
     data = DomoticzAPI("type=devices&rid="+str(SetpointDeviceIDX))
     try:
         CurrentSetpoint=float(data["result"][0]["Data"])
+        Debug ("Name = "+data["result"][0]["Name"])
         return True,CurrentSetpoint
     except:
         #Domoticz Error
         Log("error getting data from domoticz setpoint device with idx"+str(SetpointDeviceIDX))
+        return False,0
+
+def GetSwitchState(SwitchDeviceIDX):
+    data = DomoticzAPI("type=devices&rid="+str(SwitchDeviceIDX))
+    try:
+        CurrentSwitchState=False
+        if data["result"][0]["Status"]=="On":
+            CurrentSwitchState=True
+        return True,CurrentSwitchState
+    except:
+        #Domoticz Error
+        Log("error getting data from domoticz setpoint device with idx"+str(SwitchDeviceIDX))
         return False,0
 
 def GetPidValue(sp, pv):
@@ -639,8 +685,8 @@ def getConfig():
         InsideTemperatureIDX=int(IDX[0])
         OutsideTemperatureIDX=int(IDX[1])
         HeatingActiveIDX=int(IDX[2])
-        EnableHeatingIDX=int(IDX[3])
-        CoolingActiveIDX=int(IDX[4])
+        CoolingActiveIDX=int(IDX[3])
+        EnableHeatingIDX=int(IDX[4])
         EnableCoolingIDX=int(IDX[5])
         BoilerSetpointIDX=int(IDX[6])
 

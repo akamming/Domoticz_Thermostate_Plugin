@@ -105,7 +105,7 @@ CurrentInsideTemperature=0
 CurrentOutsideTemperature=0
 CurrentHeatingActive=False
 CurrentCoolingActive=False
-CurrentSetpoint=0
+CurrentBoilerSetpoint=0
 InsideTempAt=[] #Remember the inside temp the last hour
 LastPIDCalcTimestamp=0 #remember last PID Calculation
 
@@ -357,6 +357,7 @@ def getSensors():
 def GetDeviceValues():
     global CurrentInsideTemperature
     global CurrentOutsideTemperature
+    global CurrentBoilerSetpoint
     global CurrentSetpoint
     
     ReturnValue=True
@@ -379,6 +380,12 @@ def GetDeviceValues():
     Succes,CurrentInsideTemperature=GetTemperature(InsideTemperatureIDX)
     if not Succes:
         Log("Failed to get inside temperature")
+        ReturnValue=False
+    
+    #Get Inside Temperature
+    Succes,CurrentBoilerSetpoint=GetSetpoint(BoilerSetpointIDX)
+    if not Succes:
+        Log("Failed to get Current Boiler Setpoint value")
         ReturnValue=False
 
     return ReturnValue
@@ -463,6 +470,16 @@ def GetTemperature(TemperatureDeviceIDX):
         Log("error getting temperature from domoticz device with idx"+str(TemperatureDeviceIDX))
         return False,0
 
+def GetSetpoint(SetpointDeviceIDX):
+    data = DomoticzAPI("type=devices&rid="+str(SetpointDeviceIDX))
+    try:
+        CurrentSetpoint=float(data["result"][0]["Data"])
+        return True,CurrentSetpoint
+    except:
+        #Domoticz Error
+        Log("error getting data from domoticz setpoint device with idx"+str(SetpointDeviceIDX))
+        return False,0
+
 def GetPidValue(sp, pv):
     global ierr
     global DeltaKPH #Delta in Kelvin Per Hour
@@ -508,15 +525,15 @@ def GetPidValue(sp, pv):
     #Debug("Boiler setpoint : "+str(Devices[BOILERSETPOINT].sValue))
     if Devices[PROGRAMSWITCH].nValue==10:
         Debug("Heating is on")
-        Debug(str(op)+"<"+Devices[BOILERSETPOINT].sValue+"<"+str(CurrentInsideTemperature))
-        if op<float(Devices[BOILERSETPOINT].sValue) and float(Devices[BOILERSETPOINT].sValue)<pv:  #if op is dropping and and setpoint already below inside temperature
+        Debug(str(op)+"<"+str(CurrentBoilerSetpoint)+"<"+str(CurrentInsideTemperature))
+        if op<CurrentBoilerSetpoint and CurrentBoilerSetpoint<pv:  #if op is dropping and and setpoint already below inside temperature
             Debug("Not updating I Value: Boiler setpoint goes down during heating, while setpoint already below current inside temperature")
         else:
             Debug("Udating I")
             ierr = I
     elif Devices[PROGRAMSWITCH].nValue==20:
         Debug("Cooling is on")
-        if op>float(Devices[BOILERSETPOINT].sValue) and float(Devices[BOILERSETPOINT].sValue)>pv:  #if op is rising  and and setpoint already above inside temperature
+        if op>CurrentBoilerSetpoint and CurrentBoilerSetpoint>pv:  #if op is rising  and and setpoint already above inside temperature
             Debug("Not updating I Value: Boiler setpoint goes up during cooling, while setpoint already above current inside temperature")
         else:
             ierr = I

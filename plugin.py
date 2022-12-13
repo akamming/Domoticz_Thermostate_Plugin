@@ -57,20 +57,6 @@ EnableCoolingIDX=0;
 BoilerSetpointIDX=0;
 
 #UnitID's
-ENABLECENTRALHEATING=37 #Workaround, should be one when domo issue is fixed
-ENABLEHOTWATER=2
-ENABLECOOLING=3
-CENTRALHEATING=4
-HOTWATER=5
-COOLING=6
-FLAME=7
-BOILERSETPOINT=8
-DHWSETPOINT=9
-BOILERTEMPERATURE=10
-DHWTEMPERATURE=11
-RETURNTEMPERATURE=12
-MODULATION=13
-PRESSURE=14
 BOILERTEMPATPLUS20=15
 BOILERTEMPATMIN10=16
 MAXBOILERTEMP=17
@@ -86,14 +72,7 @@ CURRENTHEATINGCOOLINGSTATE=26
 HOLIDAY=27
 DHWCONTROL=28
 THERMOSTATTEMPERATURE=29
-FAULT=30
-DIAGNOSTIC=31
-FAULTCODE=32
-DHWFLOW=33
-OUTSIDETEMPERATURE=34
 FPWD=35
-#COOLINGCONTROL=36 No Longer Used
-#Enable Central Heating 37 workaround
 
 #Global vars
 Hostname=""
@@ -101,17 +80,16 @@ Debugging=False
 
 #Vars for thermostat function
 DeltaKPH=0 # Calculate change in temperature in Kelvin per hour
+LastPIDCalcTimestamp=0 #remember last PID Calculation
+ierr = 0 #Remember Integral Error
+InsideTempAt=[] #Remember the inside temp the last hour
+
+#Values to remember (in Domoticz)
 CurrentInsideTemperature=0
 CurrentOutsideTemperature=0
 CurrentHeatingActive=False
 CurrentCoolingActive=False
 CurrentBoilerSetpoint=0
-InsideTempAt=[] #Remember the inside temp the last hour
-LastPIDCalcTimestamp=0 #remember last PID Calculation
-
-ierr = 0 #Remember Integral Error
-
-
 
 def getInt(s):
     try: 
@@ -198,60 +176,6 @@ def UpdatePressureSensor(SensorName,UnitID,Value):
             Devices[UnitID].Update(nValue=int(Value), sValue=str(Value))
             Domoticz.Log("Pressure ("+Devices[UnitID].Name+")")
 
-def UpdateSensors(data):
-    #Debug("Update steering vars")
-    UpdateOnOffSensor("EnableCentralHeating",ENABLECENTRALHEATING,data["EnableCentralHeating"])
-    UpdateOnOffSensor("EnableHotWater",ENABLEHOTWATER,data["EnableHotWater"])
-    UpdateOnOffSensor("EnableCooling",ENABLECOOLING,data["EnableCooling"])
-    UpdateSetpoint("BoilerSetpoint",BOILERSETPOINT,data["BoilerSetpoint"])
-    UpdateSetpoint("DHWSetpoint",DHWSETPOINT,data["DHWSetpoint"])
-    UpdateTemperatureSensor("Thermostat Temperature",THERMOSTATTEMPERATURE,data["ThermostatTemperature"])
-
-    #Update Sensors
-    if data["OpenThermStatus"]=="OK":
-        if data["CentralHeating"]=="on":
-            UpdateDimmer("CentralHeating",CENTRALHEATING,data["CentralHeating"],data["Modulation"])
-        else:
-            UpdateDimmer("CentralHeating",CENTRALHEATING,data["CentralHeating"],0)
-
-        if data["HotWater"]=="on":
-            UpdateDimmer("HotWater",HOTWATER,data["HotWater"],int(data["Modulation"]))
-        else:
-            UpdateDimmer("HotWater",HOTWATER,data["HotWater"],"0")
-    
-        if data["Cooling"]=="on":
-            UpdateDimmer("Cooling",COOLING,data["Cooling"],int(data["Modulation"]))
-        else:
-            UpdateDimmer("Cooling",COOLING,data["Cooling"],"0")
-
-        #Update Heating Cooling State
-        level=0
-        if data["CentralHeating"]=="on":
-            level=10
-        elif  data["Cooling"]=="on":
-            level=20
-        else:
-            Debug("Heating Cooling set to 0, Centralheating is "+data["CentralHeating"]+", Cooling is "+data["Cooling"]) 
-
-        Options = {"LevelActions": "|| ||", 
-                "LevelNames": "Off|Heating|Cooling",
-                "LevelOffHidden": "false",
-                "SelectorStyle": "0"}
-        Devices[CURRENTHEATINGCOOLINGSTATE].Update(nValue=int(level), sValue=str(level), TypeName="Selector Switch", Options=Options)
-
-        UpdateOnOffSensor("Flame",FLAME,data["Flame"])
-        UpdateOnOffSensor("Fault",FAULT,data["Fault"])
-        UpdateOnOffSensor("Diagnostic",DIAGNOSTIC,data["Diagnostic"])
-        UpdateTemperatureSensor("BoilerTemperature",BOILERTEMPERATURE,data["BoilerTemperature"])
-        UpdateTemperatureSensor("DHWTemperature",DHWTEMPERATURE,data["DhwTemperature"])
-        UpdateTemperatureSensor("ReturnTemperature",RETURNTEMPERATURE,data["ReturnTemperature"])
-        UpdateTemperatureSensor("OutsideTemperature",OUTSIDETEMPERATURE,data["OutsideTemperature"])
-        UpdatePressureSensor("Pressure",PRESSURE,data["Pressure"]) 
-        UpdatePercentageSensor("Modulation",MODULATION,data["Modulation"])
-        UpdateCustomSensor("FaultCode",FAULTCODE,data["FaultCode"])
-    else:
-        Log("Communication Error between ESP and Boiler: "+data["OpenThermStatus"])
-
 def CreateSetPoint(SensorName,UnitID,DefaultValue):
     if not (UnitID in Devices):
         Debug("Creating setpoint "+SensorName)
@@ -317,43 +241,6 @@ def CreateParameters():
     CreateOnOffSwitch("Holiday",HOLIDAY)
     CreateOnOffSwitch("DHW controlled by program",DHWCONTROL)
     CreateOnOffSwitch("FirePlace/Weather Dependent Control",FPWD)
-
-def ProcessResponse(data):
-    ifversion=0;
-    #for x in data:
-     #   Debug("Value "+x+" is "+str(data[x]))
-    try:
-        ifversion=data["InterfaceVersion"]
-    except:
-        Log("ERROR: Could not get InterfaceVersion")
-
-    if ifversion==RequiredInterface:
-        UpdateSensors(data)
-    else:
-        Log("Error Interace version "+str(RequiredInterface)+" required, make sure you have latest plugin and firmware")
-
-
-
-def ESPCommand(url):
-    Debug("Calling "+Hostname+url)
-    try:
-        #response = requests.get(Hostname+url, timeout=3)
-        response = requests.get(Hostname+url,timeout=10) 
-        if (response.status_code==200):
-            ProcessResponse(response.json())
-        else:
-            Log("ERROR: unable to contact ESP on "+url+", statuscode="+str(response.status_code))
-    except requests.exceptions.Timeout:
-        Log("Error: Unable to call "+url+", due to timeout")
-    except requests.exceptions.TooManyRedirects:
-        Log("Error: Unable to call "+url+", due to too many redirects")
-    except requests.exceptions.RequestException as e:
-        Log("Error: Unable to call "+url+", due to exception ("+str(e)+")")
-    #except:
-    #    Log("Error: Unable to call "+url)
-
-def getSensors():
-    ESPCommand("GetSensors")
 
 def GetDeviceValues():
     global CurrentInsideTemperature
@@ -603,6 +490,9 @@ def CheckDebug():
         Debug("File "+str(Parameters["HomeFolder"])+"DEBUG"+" does not exist, switching off Debug mode")
         Debugging=False #True/False
 
+def ESPCommand(text):
+    Debug(text)
+
 def HandleProgram():
     Succes,TargetTemperature=CalculateBoilerSetPoint()
     if Succes:
@@ -667,7 +557,6 @@ def HandleProgram():
                     ESPCommand("command?CentralHeating=off&Cooling=Off&BoilerTemperature=0")
     else:
         Log("No temperatures returned from calculateboilersetpoint, could not execute program, updating sensors")
-        getSensors()
 
 def getConfig():
     global KP,KI,KD
@@ -725,9 +614,6 @@ class BasePlugin:
         #Create parameters if they don;t exist
         CreateParameters()
 
-        #Update Devices
-        getSensors()
-
         #Read Domoticz Devices
         GetDeviceValues()
 
@@ -783,26 +669,6 @@ class BasePlugin:
                 Succes,CurrentInsideTemperature=GetTemperature(Parameters["Mode3"])
                 if Succes:
                     ierr=CurrentInsideTemperature  #Better starting point for ierr
-
-        elif Unit==ENABLECENTRALHEATING:
-            if Command.lower()=="on":
-                ESPCommand("command?CentralHeating=on")
-            else:
-                ESPCommand("command?CentralHeating=off")
-        elif Unit==ENABLEHOTWATER:
-            if Command.lower()=="on":
-                ESPCommand("command?HotWater=on")
-            else:
-                ESPCommand("command?HotWater=off")
-        elif Unit==ENABLECOOLING:
-            if Command.lower()=="on":
-                ESPCommand("command?Cooling=on")
-            else:
-                ESPCommand("command?Cooling=off")
-        elif Unit==BOILERSETPOINT:
-            ESPCommand("command?BoilerTemperature="+str(Level))
-        elif Unit==DHWSETPOINT:
-            ESPCommand("command?DHWTemperature="+str(Level))
         else: 
             Log("Unhandled command")
 
@@ -839,7 +705,6 @@ class BasePlugin:
             HandleProgram()
         else:
             Debug("Do nothing: Unable to get temperatures")
-            getSensors()
 
 global _plugin
 _plugin = BasePlugin()

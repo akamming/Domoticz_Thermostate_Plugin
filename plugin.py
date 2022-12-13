@@ -413,6 +413,50 @@ def GetSwitchState(SwitchDeviceIDX):
         Log("error getting data from domoticz setpoint device with idx"+str(SwitchDeviceIDX))
         return False,0
 
+def SetSwitchState(SwitchDeviceIDX,Value):
+    data=DomoticzAPI("type=command&param=switchlight&idx="+str(SwitchDeviceIDX)+"&switchcmd="+str(Value))
+    try:
+        if data["status"]=="OK":
+            return True
+        else:
+            Debug(data)
+            return False
+    except:
+        #Domoticz Error
+        Log("error getting data from domoticz setpoint device with idx"+str(SwitchDeviceIDX))
+        return False,0
+
+def SetSetpoint(SetpointDeviceIDX,Value):
+    data=DomoticzAPI("type=command&param=setsetpoint&idx="+str(SetpointDeviceIDX)+"&setpoint="+str(Value))
+    try:
+        if data["status"]=="OK":
+            return True
+        else:
+            Debug(data)
+            return False
+    except:
+        #Domoticz Error
+        Log("error getting data from domoticz setpoint device with idx"+str(SwitchDeviceIDX))
+        return False,0
+
+def SetHeatingCoolingState(Heating,Cooling,Setpoint):
+    #Set Enable Heating
+    if Heating:
+        SetSwitchState(EnableHeatingIDX,"On")
+    else:
+        SetSwitchState(EnableHeatingIDX,"Off")
+
+    #Set Enable Cooling
+    if Cooling:
+        SetSwitchState(EnableCoolingIDX,"On")
+    else:
+        SetSwitchState(EnableCoolingIDX,"Off")
+
+    #Set Setpoint
+    SetSetpoint(BoilerSetpointIDX,Setpoint)
+
+
+
 def GetPidValue(sp, pv):
     global ierr
     global DeltaKPH #Delta in Kelvin Per Hour
@@ -501,10 +545,7 @@ def HandleProgram():
         if CurrentOutsideTemperature>(Devices[SWITCHHEATINGOFFAT].nValue) and Devices[FPWD].nValue==1:
             Debug("Weather dependant and outside temp aboven day treshold, leave or switch off heating")
             #We are at the temperature at which we can switchoff heating
-            if Devices[PROGRAMSWITCH].nValue>10:
-                ESPCommand("command?CentralHeating=off&Cooling=off&BoilerTemperature=0")
-            else:
-                ESPCommand("command?CentralHeating=off&BoilerTemperature=0")
+            SetHeatingCoolingState(False,False,0)
         else:
             if (Devices[PROGRAMSWITCH].nValue>0 and Devices[HOLIDAY].nValue==0):
                 Debug("Handling Day/Night program")
@@ -512,24 +553,25 @@ def HandleProgram():
                 if Devices[PROGRAMSWITCH].nValue==10: #HEATING
                     if TargetTemperature>CurrentInsideTemperature: 
                         Debug("HEATING: Setting boiler temp to "+str(TargetTemperature))
-                        ESPCommand("command?CentralHeating=on&Cooling=Off&BoilerTemperature="+str(TargetTemperature))
+                        SetHeatingCoolingState(True,False,TargetTemperature)
+
                     else:
                         Debug("HEATING: Switching off heating ")
-                        ESPCommand("command?CentralHeating=off&Cooling=Off&BoilerTemperature="+str(TargetTemperature))
+                        SetHeatingCoolingState(False,False,TargetTemperature)
                 elif Devices[PROGRAMSWITCH].nValue==20: #COOLING
                     if TargetTemperature<CurrentInsideTemperature: 
                         Debug("COOLING: Setting water temp to "+str(TargetTemperature))
-                        ESPCommand("command?CentralHeating=off&Cooling=On&BoilerTemperature="+str(TargetTemperature))
+                        SetHeatingCoolingState(False,True,TargetTemperature)
                     else:
                         Debug("COOLING: Switching off Cooling")
-                        ESPCommand("command?CentralHeating=off&Cooling=Off&BoilerTemperature="+str(TargetTemperature))
+                        SetHeatingCoolingState(False,False,TargetTemperature)
                 elif Devices[PROGRAMSWITCH].nValue==30: #AUTO
                     if TargetTemperature>CurrentInsideTemperature: 
                         Debug("AUTO: HEATING: Setting boiler temp to "+str(TargetTemperature))
-                        ESPCommand("command?CentralHeating=on&Cooling=Off&BoilerTemperature="+str(TargetTemperature))
+                        SetHeatingCoolingState(True,False,TargetTemperature)
                     else:
                         Debug("AUTO: COOLING: Setting water temp to "+str(TargetTemperature))
-                        ESPCommand("command?CentralHeating=off&Cooling=On&BoilerTemperature="+str(TargetTemperature))
+                        SetHeatingCoolingState(False,True,TargetTemperature)
                 else:
                     Debug("Weird: This code should not be reached, Programswitch set to "+str(Devices[PROGRAMSWITCH].nValue))
 
@@ -551,10 +593,10 @@ def HandleProgram():
                 #Manage Heating
                 if CurrentInsideTemperature<=Devices[FROSTPROTECTIONSETPOINT].nValue:
                     Debug("temperature below frostprotection setpoint, make sure there is heating")
-                    ESPCommand("command?CentralHeating=on&Cooling=Off&BoilerTemperature="+str(TargetTemperature))
+                    SetHeatingCoolingState(True,False,TargetTemperature)
                 else:
                     Debug("temperature above frost protection setpoint, switch off heating")
-                    ESPCommand("command?CentralHeating=off&Cooling=Off&BoilerTemperature=0")
+                    SetHeatingCoolingState(False,False,TargetTemperature)
     else:
         Log("No temperatures returned from calculateboilersetpoint, could not execute program, updating sensors")
 
@@ -652,7 +694,7 @@ class BasePlugin:
             if Devices[Unit].nValue==0: 
                 ESPCommand("command?BoilerTemperature=0&CentralHeating=off&Cooling=off")
             #Reset Thermostat Global Values to give fresh start to new program mode
-            Succes,CurrentInsideTemperature=GetTemperature(Parameters["Mode3"])
+            Succes,CurrentInsideTemperature=GetTemperature(CurrentInsideTemperatureIDX)
             if Succes:
                 ierr=CurrentInsideTemperature  #Better starting point for ierr
 
@@ -666,7 +708,7 @@ class BasePlugin:
             #If FirePlace/WeatherDependent switch was set: reset thermostat vars
             if (Unit==FPWD and Command=="Off"):
                 #Reset Thermostat Values
-                Succes,CurrentInsideTemperature=GetTemperature(Parameters["Mode3"])
+                Succes,CurrentInsideTemperature=GetTemperature(CurrentInsideTemperatureIDX)
                 if Succes:
                     ierr=CurrentInsideTemperature  #Better starting point for ierr
         else: 
@@ -694,6 +736,7 @@ class BasePlugin:
         CreateParameters()
 
         if (GetDeviceValues()):
+            Debug("Current Inside Temperature is "+str(CurrentInsideTemperature))
             #Update History
             CurrentMin=int((time.time() % 3600) / 60)
             InsideTempAt[CurrentMin]=CurrentInsideTemperature

@@ -23,7 +23,7 @@
         <param field="Port" label="Domoticz Port" width="40px" required="true" default="8080"/>
         <param field="Username" label="Domoticz Username" width="200px" required="false" default=""/>
         <param field="Password" label="Domoticz Password" width="200px" required="false" default=""/>
-        <param field="Mode2" label="comma seperated idx numers for Insidetemperature, OutsideTemperature, HeatingActive, CoolingActive, EnableHeating, EnableCooling, BoilerSetpoint" default="1,2,3,4,5,6,7" width="200px" required="true" />
+        <param field="Mode2" label="comma seperated idx numers for Insidetemperature, OutsideTemperature, HeatingActive, CoolingActive, HotWaterActive, EnableHeating, EnableCooling, BoilerSetpoint" default="1,2,3,4,5,6,7" width="200px" required="true" />
         <param field="Mode3" label="P,I and D value (comma separated)" default="30,0.01,2.5" width="100px" required="true" />
         <param field="Mode4" label="Daytime Extension Time in minutes" default="120" required="true" />
     </params>
@@ -52,6 +52,7 @@ InsideTemperatureIDX=0;
 OutsideTemperatureIDX=0;
 HeatingActiveIDX=0;
 CoolingActiveIDX=0;
+HotWaterActiveIDX=0;
 EnableHeatingIDX=0;
 EnableCoolingIDX=0;
 BoilerSetpointIDX=0;
@@ -70,7 +71,6 @@ FROSTPROTECTIONSETPOINT=24
 REFERENCEROOMCOMPENSATION=25
 CURRENTHEATINGCOOLINGSTATE=26
 HOLIDAY=27
-DHWCONTROL=28
 THERMOSTATTEMPERATURE=29
 FPWD=35
 
@@ -90,6 +90,7 @@ CurrentInsideTemperature=0
 CurrentOutsideTemperature=0
 CurrentHeatingActive=False
 CurrentCoolingActive=False
+CurrentHotWaterActive=False
 CurrentBoilerSetpoint=0
 
 def getInt(s):
@@ -240,7 +241,6 @@ def CreateParameters():
     CreateSetPoint("Frost Protection Setpoint",FROSTPROTECTIONSETPOINT,7)
     CreateSetPoint("Reference Room Temperature Compensation",REFERENCEROOMCOMPENSATION,3)
     CreateOnOffSwitch("Holiday",HOLIDAY)
-    CreateOnOffSwitch("DHW controlled by program",DHWCONTROL)
     CreateOnOffSwitch("FirePlace/Weather Dependent Control",FPWD)
 
 def GetDeviceValues():
@@ -248,6 +248,7 @@ def GetDeviceValues():
     global CurrentOutsideTemperature
     global CurrentCoolingActive
     global CurrentHeatingActive
+    global CurrentHotWaterActive
     global CurrentBoilerSetpoint
     global CurrentSetpoint
     
@@ -289,6 +290,12 @@ def GetDeviceValues():
     Succes,CurrentCoolingActive=GetSwitchState(CoolingActiveIDX)
     if not Succes:
         Log("Failed to get Current CoolingActive value")
+        ReturnValue=False
+
+    #Get HotWaterActive 
+    Succes,CurrentHotWaterActive=GetSwitchState(HotWaterActiveIDX)
+    if not Succes:
+        Log("Failed to get Current HotWaterActive value")
         ReturnValue=False
 
     if ReturnValue: #Update Heating Cooling State if we have everything
@@ -548,75 +555,65 @@ def CheckSimulation():
         Debug("File "+str(Parameters["HomeFolder"])+"SIM"+" does not exist, switching off Simulation mode")
         Debugging=False #True/False
 
-def ESPCommand(text):
-    Debug(text)
-
 def HandleProgram():
-    Succes,TargetTemperature=CalculateBoilerSetPoint()
-    if Succes:
-        Debug("Current Setpoint is "+str(CurrentSetpoint))
-        #Program Active, try to get outside temperature
-        if CurrentOutsideTemperature>(Devices[SWITCHHEATINGOFFAT].nValue) and Devices[FPWD].nValue==1:
-            Debug("Weather dependant and outside temp aboven day treshold, leave or switch off heating")
-            #We are at the temperature at which we can switchoff heating
-            SetHeatingCoolingState(False,False,0)
-        else:
-            if (Devices[PROGRAMSWITCH].nValue>0 and Devices[HOLIDAY].nValue==0):
-                Debug("Handling Day/Night program")
-
-                if Devices[PROGRAMSWITCH].nValue==10: #HEATING
-                    if TargetTemperature>CurrentInsideTemperature: 
-                        Debug("HEATING: Setting boiler temp to "+str(TargetTemperature))
-                        SetHeatingCoolingState(True,False,TargetTemperature)
-
-                    else:
-                        Debug("HEATING: Switching off heating ")
-                        SetHeatingCoolingState(False,False,TargetTemperature)
-                elif Devices[PROGRAMSWITCH].nValue==20: #COOLING
-                    if TargetTemperature<CurrentInsideTemperature: 
-                        Debug("COOLING: Setting water temp to "+str(TargetTemperature))
-                        SetHeatingCoolingState(False,True,TargetTemperature)
-                    else:
-                        Debug("COOLING: Switching off Cooling")
-                        SetHeatingCoolingState(False,False,TargetTemperature)
-                elif Devices[PROGRAMSWITCH].nValue==30: #AUTO
-                    if TargetTemperature>CurrentInsideTemperature: 
-                        Debug("AUTO: HEATING: Setting boiler temp to "+str(TargetTemperature))
-                        SetHeatingCoolingState(True,False,TargetTemperature)
-                    else:
-                        Debug("AUTO: COOLING: Setting water temp to "+str(TargetTemperature))
-                        SetHeatingCoolingState(False,True,TargetTemperature)
-                else:
-                    Debug("Weird: This code should not be reached, Programswitch set to "+str(Devices[PROGRAMSWITCH].nValue))
-
-                #Manage DHW
-                if Devices[DHWCONTROL].nValue==1:
-                    if  Devices[ENABLEHOTWATER].nValue==0:
-                        Log("Switching on DHW")
-                        ESPCommand("command?HotWater=on")
-
-            else: 
-                if Devices[HOLIDAY].nValue==1:
-                    Debug("Holiday program active")
-                Debug("Handling Frost protection program")
-                #Manage DHW
-                if Devices[DHWCONTROL].nValue==1:
-                    if  Devices[ENABLEHOTWATER].nValue==1:
-                        Log("Switching off DHW")
-                        ESPCommand("command?HotWater=off")
-                #Manage Heating
-                if CurrentInsideTemperature<=Devices[FROSTPROTECTIONSETPOINT].nValue:
-                    Debug("temperature below frostprotection setpoint, make sure there is heating")
-                    SetHeatingCoolingState(True,False,TargetTemperature)
-                else:
-                    Debug("temperature above frost protection setpoint, switch off heating")
-                    SetHeatingCoolingState(False,False,TargetTemperature)
+    if CurrentHotWaterActive:
+        Debug("Hot Water System is Active, suspending Central Heating Program")
     else:
-        Log("No temperatures returned from calculateboilersetpoint, could not execute program, updating sensors")
+        Succes,TargetTemperature=CalculateBoilerSetPoint()
+        if Succes:
+            Debug("Current Setpoint is "+str(CurrentSetpoint))
+            #Program Active, try to get outside temperature
+            if CurrentOutsideTemperature>(Devices[SWITCHHEATINGOFFAT].nValue) and Devices[FPWD].nValue==1:
+                Debug("Weather dependant and outside temp aboven day treshold, leave or switch off heating")
+                #We are at the temperature at which we can switchoff heating
+                SetHeatingCoolingState(False,False,0)
+            else:
+                if (Devices[PROGRAMSWITCH].nValue>0 and Devices[HOLIDAY].nValue==0):
+                    Debug("Handling Day/Night program")
+
+                    if Devices[PROGRAMSWITCH].nValue==10: #HEATING
+                        if TargetTemperature>CurrentInsideTemperature: 
+                            Debug("HEATING: Setting boiler temp to "+str(TargetTemperature))
+                            SetHeatingCoolingState(True,False,TargetTemperature)
+
+                        else:
+                            Debug("HEATING: Switching off heating ")
+                            SetHeatingCoolingState(False,False,TargetTemperature)
+                    elif Devices[PROGRAMSWITCH].nValue==20: #COOLING
+                        if TargetTemperature<CurrentInsideTemperature: 
+                            Debug("COOLING: Setting water temp to "+str(TargetTemperature))
+                            SetHeatingCoolingState(False,True,TargetTemperature)
+                        else:
+                            Debug("COOLING: Switching off Cooling")
+                            SetHeatingCoolingState(False,False,TargetTemperature)
+                    elif Devices[PROGRAMSWITCH].nValue==30: #AUTO
+                        if TargetTemperature>CurrentInsideTemperature: 
+                            Debug("AUTO: HEATING: Setting boiler temp to "+str(TargetTemperature))
+                            SetHeatingCoolingState(True,False,TargetTemperature)
+                        else:
+                            Debug("AUTO: COOLING: Setting water temp to "+str(TargetTemperature))
+                            SetHeatingCoolingState(False,True,TargetTemperature)
+                    else:
+                        Debug("Weird: This code should not be reached, Programswitch set to "+str(Devices[PROGRAMSWITCH].nValue))
+
+                else: 
+                    if Devices[HOLIDAY].nValue==1:
+                        Debug("Holiday program active")
+                    Debug("Handling Frost protection program")
+                    
+                    #Manage Heating
+                    if CurrentInsideTemperature<=Devices[FROSTPROTECTIONSETPOINT].nValue:
+                        Debug("temperature below frostprotection setpoint, make sure there is heating")
+                        SetHeatingCoolingState(True,False,TargetTemperature)
+                    else:
+                        Debug("temperature above frost protection setpoint, switch off heating")
+                        SetHeatingCoolingState(False,False,TargetTemperature)
+        else:
+            Log("No temperatures returned from calculateboilersetpoint, could not execute program, updating sensors")
 
 def getConfig():
     global KP,KI,KD
-    global InsideTemperatureIDX,OutsideTemperatureIDX,HeatingActiveIDX,CoolingActiveIDX,EnableHeatingIDX,EnableCoolingIDX,BoilerSetpointIDX
+    global InsideTemperatureIDX,OutsideTemperatureIDX,HeatingActiveIDX,CoolingActiveIDX,HotWaterActiveIDX,EnableHeatingIDX,EnableCoolingIDX,BoilerSetpointIDX
 
     try:
         # PID Parameters
@@ -631,9 +628,10 @@ def getConfig():
         OutsideTemperatureIDX=int(IDX[1])
         HeatingActiveIDX=int(IDX[2])
         CoolingActiveIDX=int(IDX[3])
-        EnableHeatingIDX=int(IDX[4])
-        EnableCoolingIDX=int(IDX[5])
-        BoilerSetpointIDX=int(IDX[6])
+        HotWaterActiveIDX=int(IDX[4])
+        EnableHeatingIDX=int(IDX[5])
+        EnableCoolingIDX=int(IDX[6])
+        BoilerSetpointIDX=int(IDX[7])
 
     except Exception as e:
         Domoticz.Error("Exception :{}".format(e))
@@ -707,13 +705,14 @@ class BasePlugin:
             Devices[Unit].Update(nValue=int(Level), sValue=str(Level), Options=Options)
             #Switch off heating and cooling in case progam was shut down
             if Devices[Unit].nValue==0: 
-                ESPCommand("command?BoilerTemperature=0&CentralHeating=off&Cooling=off")
+                SetHeatingCoolingState(False,False,0)
+
             #Reset Thermostat Global Values to give fresh start to new program mode
             Succes,CurrentInsideTemperature=GetTemperature(CurrentInsideTemperatureIDX)
             if Succes:
                 ierr=CurrentInsideTemperature  #Better starting point for ierr
 
-        elif Unit in {HOLIDAY,DHWCONTROL,FPWD}:
+        elif Unit in {HOLIDAY,FPWD}:
             #Handle Switch
             NewValue=0
             if Command=="On":

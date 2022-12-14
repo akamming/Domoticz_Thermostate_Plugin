@@ -77,6 +77,7 @@ FPWD=35
 #Global vars
 Hostname=""
 Debugging=False
+Simulation=False
 
 #Vars for thermostat function
 DeltaKPH=0 # Calculate change in temperature in Kelvin per hour
@@ -440,22 +441,24 @@ def SetSetpoint(SetpointDeviceIDX,Value):
         return False,0
 
 def SetHeatingCoolingState(Heating,Cooling,Setpoint):
-    #Set Enable Heating
-    if Heating:
-        SetSwitchState(EnableHeatingIDX,"On")
+    if Simulation:
+        Debug("Simulation mode, Heating is set to "+str(Heating)+", Cooling is set to "+str(Cooling)+", Setpoint is set to "+str(Setpoint))
     else:
-        SetSwitchState(EnableHeatingIDX,"Off")
+        Debug("Simulation is off, Setting Heating to "+str(Heating)+", Cooling to "+str(Cooling)+", Setpoint to "+str(Setpoint))
+        #Set Enable Heating
+        if Heating:
+            SetSwitchState(EnableHeatingIDX,"On")
+        else:
+            SetSwitchState(EnableHeatingIDX,"Off")
 
-    #Set Enable Cooling
-    if Cooling:
-        SetSwitchState(EnableCoolingIDX,"On")
-    else:
-        SetSwitchState(EnableCoolingIDX,"Off")
+        #Set Enable Cooling
+        if Cooling:
+            SetSwitchState(EnableCoolingIDX,"On")
+        else:
+            SetSwitchState(EnableCoolingIDX,"Off")
 
-    #Set Setpoint
-    SetSetpoint(BoilerSetpointIDX,Setpoint)
-
-
+        #Set Setpoint
+        SetSetpoint(BoilerSetpointIDX,Setpoint)
 
 def GetPidValue(sp, pv):
     global ierr
@@ -532,6 +535,17 @@ def CheckDebug():
         Log("File "+str(Parameters["HomeFolder"])+"DEBUG"+" exists, switched on Debug mode")
     else:
         Debug("File "+str(Parameters["HomeFolder"])+"DEBUG"+" does not exist, switching off Debug mode")
+        Debugging=False #True/False
+
+def CheckSimulation():
+    global Simulation
+    
+    #Check if we have to switch on debug mode
+    if os.path.exists(str(Parameters["HomeFolder"])+"SIM"):
+        Simulation=True
+        Log("File "+str(Parameters["HomeFolder"])+"SIM"+" exists, switched on Simulation mode (no commands sent to control actual heating/cooling")
+    else:
+        Debug("File "+str(Parameters["HomeFolder"])+"SIM"+" does not exist, switching off Simulation mode")
         Debugging=False #True/False
 
 def ESPCommand(text):
@@ -639,6 +653,7 @@ class BasePlugin:
         global InsideTempAt
 
         CheckDebug()  #Check if we have to enable debugging
+        CheckSimulation()  #Check if we have to enable simulation
 
         #Get Pid parameters
         getConfig()
@@ -731,6 +746,7 @@ class BasePlugin:
         global DeltaKPH
 
         CheckDebug() #Check if we have to enable debug logging
+        CheckSimulation() #Check if we have to enable debug logging
         
         #Make sure all params are there so the user can control the program..
         CreateParameters()

@@ -1,6 +1,14 @@
 # Domoticz_Thermostate_Plugin
 Domoticz Plugin for ESP thermostat with weather dependent heating control, but can also act like a normal thermostat based on inside temperature only.
 
+
+## Warning for this version
+WARNING:  This version is part of a new 2.0 release which makes a clear split between the ESP and this plugin and therefor breaks compatibility with the previous one. Use  release  1.1 if you are using the old firmware:
+
+Main differences (documentation still needs to be adapted):
+- The ESP creates devices using autodiscovery feature (which can be used in both HA and Domoticz)
+- This plugin is more generic, creating a thermostat which only switches domoticz devices (and is fully compatible with the devices created by the new ESP firmware) but could be used to control any heating in which you can control the boilersetpoint as long as you have the correct devices in domoticz..
+
 ## Why this plugin
 My current boiler is end of life and i needed a new one. My current thermostate is already Weather Dependent, but cannot take advantage of the modulation features of a new boiler and i didn't like the limitations of all the commercial propositions of a smart weather dependent thermostate, so by creating one myself in domoticz I now have the following advantages:
 1. lower cost for the same functionality as my old thermostat: 30 EUR of material against 300 EUR for a commercial system (and then i'm ignoring the fact that after initial price, some also need subscriptions)

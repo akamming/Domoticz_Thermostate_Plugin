@@ -65,8 +65,7 @@ MINBOILERTEMP=18
 SWITCHHEATINGOFFAT=19
 PROGRAMSWITCH=20
 CURVATURESWITCH=21
-DAYSETPOINT=22
-NIGHTSETPOINT=23
+SETPOINT=22
 FROSTPROTECTIONSETPOINT=24
 REFERENCEROOMCOMPENSATION=25
 CURRENTHEATINGCOOLINGSTATE=26
@@ -236,8 +235,7 @@ def CreateParameters():
     CreateProgramSwitch()
     CreateHeatingCoolingSwitch()
     CreateCurvatureSwitch()
-    CreateSetPoint("Day Setpoint",DAYSETPOINT,20)
-    CreateSetPoint("Night Setpoint",NIGHTSETPOINT,15)
+    CreateSetPoint("Day Setpoint",SETPOINT,20)
     CreateSetPoint("Frost Protection Setpoint",FROSTPROTECTIONSETPOINT,7)
     CreateSetPoint("Reference Room Temperature Compensation",REFERENCEROOMCOMPENSATION,3)
     CreateOnOffSwitch("Holiday",HOLIDAY)
@@ -257,7 +255,7 @@ def GetDeviceValues():
     #check to which target to get
     if (Devices[PROGRAMSWITCH].nValue>0 and Devices[HOLIDAY].nValue==0):
         Debug("Heating/Cooling is switched on, using day setpoint")
-        CurrentSetpoint=float(Devices[DAYSETPOINT].sValue)
+        CurrentSetpoint=float(Devices[SETPOINT].sValue)
     else:
         Debug("Heating/Cooling is switched off")
         CurrentSetpoint=float(Devices[FROSTPROTECTIONSETPOINT].sValue)
@@ -511,7 +509,6 @@ def GetPidValue(sp, pv):
             I = I - KI * error * dt
 
 
-    #Debug("Boiler setpoint : "+str(Devices[BOILERSETPOINT].sValue))
     if Devices[PROGRAMSWITCH].nValue==10:
         Debug("Heating is on")
         Debug(str(op)+"<"+str(CurrentBoilerSetpoint)+"<"+str(CurrentInsideTemperature))
@@ -530,7 +527,7 @@ def GetPidValue(sp, pv):
         Debug("Auto is on")
         ierr = I
     else: 
-        Debug("Program switched off")
+        Debug("Frost Protection is on")
 
     Debug("Import;sp(setpoint)=" + str(sp) + ";pv(current value)=" + str(pv) + ";dt(delta time)=" + str(dt) + ";op(PID)=" + str(op) + ";P=" + str(P) + ";I=" + str(I) + ";D=" + str(D))
     return op
@@ -571,7 +568,7 @@ def HandleProgram():
                 SetHeatingCoolingState(False,False,0)
             else:
                 if (Devices[PROGRAMSWITCH].nValue>0 and Devices[HOLIDAY].nValue==0):
-                    Debug("Handling Day/Night program")
+                    Debug("Handling program")
 
                     if Devices[PROGRAMSWITCH].nValue==10: #HEATING
                         if TargetTemperature>CurrentInsideTemperature: 
@@ -695,7 +692,7 @@ class BasePlugin:
 
         Debug("onCommand called for Unit " + str(Unit) + ": Parameter '" + str(Command) + "', Level: " + str(Level))
         if Unit in {CURVATURESWITCH,MINBOILERTEMP,MAXBOILERTEMP,BOILERTEMPATMIN10,BOILERTEMPATPLUS20,SWITCHHEATINGOFFAT,
-                DAYSETPOINT,NIGHTSETPOINT,FROSTPROTECTIONSETPOINT,REFERENCEROOMCOMPENSATION}:
+                SETPOINT,FROSTPROTECTIONSETPOINT,REFERENCEROOMCOMPENSATION}:
             if Devices[Unit].sValue=="" or float(Devices[Unit].sValue)!=float(Level):
                 Devices[Unit].Update(nValue=int(Level), sValue=str(Level))
         elif Unit==PROGRAMSWITCH:

@@ -403,11 +403,11 @@ def GetSetpoint(SetpointDeviceIDX):
     data = DomoticzAPI("type=devices&rid="+str(SetpointDeviceIDX))
     try:
         CurrentSetpoint=float(data["result"][0]["Data"])
-        Debug ("Setpoint "+data["result"][0]["Name"]+" has temperature "+str(CurrentTemperature))
+        Debug ("Sensor "+data["result"][0]["Name"]+" has temperature "+str(CurrentSetpoint))
         return True,CurrentSetpoint
-    except:
+    except Exception as e:
         #Domoticz Error
-        Log("error getting data from domoticz setpoint device with idx "+str(SetpointDeviceIDX))
+        Log("error getting data from domoticz setpoint device with idx "+str(SetpointDeviceIDX)+": "+str(e))
         return False,0
 
 def GetSwitchState(SwitchDeviceIDX):
@@ -710,7 +710,7 @@ class BasePlugin:
                 SetHeatingCoolingState(False,False,0)
 
             #Reset Thermostat Global Values to give fresh start to new program mode
-            Succes,CurrentInsideTemperature=GetTemperature(CurrentInsideTemperatureIDX)
+            Succes,CurrentInsideTemperature=GetTemperature(InsideTemperatureIDX)
             if Succes:
                 ierr=CurrentInsideTemperature  #Better starting point for ierr
 
@@ -724,7 +724,7 @@ class BasePlugin:
             #If FirePlace/WeatherDependent switch was set: reset thermostat vars
             if (Unit==FPWD and Command=="Off"):
                 #Reset Thermostat Values
-                Succes,CurrentInsideTemperature=GetTemperature(CurrentInsideTemperatureIDX)
+                Succes,CurrentInsideTemperature=GetTemperature(InsideTemperatureIDX)
                 if Succes:
                     ierr=CurrentInsideTemperature  #Better starting point for ierr
         else: 

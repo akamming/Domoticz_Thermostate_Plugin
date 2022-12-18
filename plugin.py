@@ -392,21 +392,22 @@ def GetTemperature(TemperatureDeviceIDX):
     data = DomoticzAPI("type=devices&rid="+str(TemperatureDeviceIDX))
     try:
         CurrentTemperature=data["result"][0]["Temp"]
+        Debug ("Sensor "+data["result"][0]["Name"]+" has temperature "+str(CurrentTemperature))
         return True,CurrentTemperature
     except:
         #Domoticz Error
-        Log("error getting temperature from domoticz device with idx"+str(TemperatureDeviceIDX))
+        Log("error getting temperature from domoticz device with idx "+str(TemperatureDeviceIDX))
         return False,0
 
 def GetSetpoint(SetpointDeviceIDX):
     data = DomoticzAPI("type=devices&rid="+str(SetpointDeviceIDX))
     try:
         CurrentSetpoint=float(data["result"][0]["Data"])
-        Debug ("Name = "+data["result"][0]["Name"])
+        Debug ("Setpoint "+data["result"][0]["Name"]+" has temperature "+str(CurrentTemperature))
         return True,CurrentSetpoint
     except:
         #Domoticz Error
-        Log("error getting data from domoticz setpoint device with idx"+str(SetpointDeviceIDX))
+        Log("error getting data from domoticz setpoint device with idx "+str(SetpointDeviceIDX))
         return False,0
 
 def GetSwitchState(SwitchDeviceIDX):
@@ -415,10 +416,11 @@ def GetSwitchState(SwitchDeviceIDX):
         CurrentSwitchState=False
         if data["result"][0]["Status"]=="On":
             CurrentSwitchState=True
+        Debug ("switch "+data["result"][0]["Name"]+" is set to "+data["result"][0]["Status"])
         return True,CurrentSwitchState
     except:
         #Domoticz Error
-        Log("error getting data from domoticz setpoint device with idx"+str(SwitchDeviceIDX))
+        Log("error getting data from domoticz setpoint device with idx "+str(SwitchDeviceIDX))
         return False,0
 
 def SetSwitchState(SwitchDeviceIDX,Value):

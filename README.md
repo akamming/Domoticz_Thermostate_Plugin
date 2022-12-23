@@ -30,26 +30,25 @@ My current boiler is end of life and i needed a new one. My current thermostate 
     - a working temperature device for measuring the inside temperature in 1 room (the "reference room")
 
 ## installation
-1. Install the custom firmware on Wemos D1, using instructions here (https://github.com/akamming/esp_domoticz_opentherm_handler) 
-2. Connect the Wemos D1 to the opentherm adapter on pin 2 and 3
-3. Connect the opentherm adapter to the boiler 
-4. Prepare the Wemos D1 by 
-    - powering on the device
-    - connect with a device to WiFi Access Point "Thermostat"
-    - browser to http://192.168.4.1 
-    - follow instructions to connect the ESP to correct WiFi network
-5. install this plugin into domoticz by     
+1. Make sure you have the correct devices in domoticz to handle you boiler. E.G. by using the ESP firmware on an ESP8266 together with an opentherm adatper: (https://github.com/akamming/esp_domoticz_opentherm_handler) in combination 
+2. install this plugin into domoticz by     
    - cd your_domoticz_dit/plugins
    - download the release from the "releases" link, unzip the .zip in a new directory to your liking
    - or if you want alway want to have the latest updates: instead of downloading the release download directly from the reposity with "git clone https://github.com/akamming/Domoticz_Thermostate_Plugin/"   (later you can do git pull to get the latest updates) 
    - restart domoticz
    - go to hardware page. The plugin (Weather Dependent Heating Control) should now be visible in the "Type" dropdown
-6. select the plugin, and enter the following config:
+3. select the plugin, and enter the following config:
     - the hostname/ipadress and port of domoticz (mandatory, default works with standard domoticz installation), 
     - option username/password for domoticz (mandatory, in standard domoticz install, you can leave this empty) 
-    - the  hostname / ip adres of your Wemos  (mandatory, in standard network config, domoticz can find the ESP using the default setting)
-    - the IDX of the domoticz device which measures the outdoor temperature (mandatory)
-    - idx IDX of the domoticz device which measures temperature in the reference room (mandatory)) 
+    - the IDX numbers of your domotica needed devices (separated with a comma). These device are created automatically if you use the referenced ESP8266 firmware 
+       - Inside temperature: a temperature device for your inside temperature (used for modulating thermostat mode)
+       - Outside temperature: a temperature device for your outside temperature (used for weather dependent mode)
+       - Heating Active: a switch which reports "ON" when heating is active
+       - Cooling Active: a switch which reports "ON" when cooling is active
+       - HotWater Active: a switch which reports "ON" when the boiler is in HotWater heating mode
+       - EnableHeating: a switch which tells the boiler to switch on heating mode
+       - EnableCooling: a switch which tells the system to switch on cooling mode
+       - BoilerSetpoint: a setpoint device which sets the to be acquired boiler temperature
     - and a duration for the "Daytime Extensions" button in minutes 
 7. Click "add"
  
@@ -57,45 +56,27 @@ If all works well, several devices should have been added to the devices tab and
 ![image](https://user-images.githubusercontent.com/30364409/118498856-b8ae4100-b726-11eb-8a57-1d12cbe4ae94.png)
 
 ## How to use the plugin
-1. 1st of all your need to configure your heating curve, by setting the setpoints "Boiler Temp at +20", "Boilertemp at -10" and the "Curvator" selector switch. See paragraph below on how to get to the correct curve. Here's an example (+20 settings = 20, -10 setting is 10) with the different curvature settings drawn into it to get an idea:
+1. If you plan to use Weather Dependent mode: your need to configure your heating curve, by setting the setpoints "Boiler Temp at +20", "Boilertemp at -10" and the "Curvator" selector switch. See paragraph below on how to get to the correct curve. Here's an example (+20 settings = 20, -10 setting is 10) with the different curvature settings drawn into it to get an idea:
 ![image](https://user-images.githubusercontent.com/30364409/118477419-f010f380-b70e-11eb-9796-9752f7067d76.png)
     
 2. Then there are additional setpoints you can configure to change the bevaviour
     - A "Fireplace / Weather Dependent Control": If switched on, the thermostate is in Weather Dependant Mode, meaning the outside temperature and the heating curve determines the temperature of the boiler. If switched off, the plugin will act like a normal thermostat, bringing the room to the right temperature based on internal temperature sensor only.
-    - "Program": a selector in which you can choose wich porgram to run: Off (no programming, only manual), Day (Boiler temperature is based on heating cuver and reference room compensation), Night (Boiler is switched off, unless below night setpoint), Frost Protection (Boiler is switched off, unless temperature below fp setpoint)
+    - "Program": a selector in which you can choose wich porgram to run: Off (no programming, only manual), Heating (only control heating), Cooling (only control cooling) & Auto (automatically choose between heating & cooling)  
     - "Temperature compensation": setting the parameters will make sure that if reference room temperature is below the "setpoint", the boiler temperature is raised with the difference in temperature, multiplied by the "Temperature compensation" setting. E.g. when you want it bo be 20 Celcius, but actual temp is 18 celcius en temperature compensation is set to 5 degrees Celcius, the boiler temperature will be raised with 10 degreees celcius
-    - "Day Setpoint", "Night Setpoint", "Frost Protection Setpoint". The setpoint values to aim for in the different pograms
+    - "Day Setpoint" & "Frost Protection Setpoint". The setpoint values to aim for in the different pograms
     - "Minimum Boiler Temperature" and "Maximum Boiler Temperature": No matter what the outcome of the calculations above. The boiler temperature will never exceed these values.
     - A "Holiday" switch: if this is set to "On", it will overrule any program and only make heating active when the reference room temperature drops below the frost protection setpoint
     - A "Daytime extension" switch: When this switch is on, it will override any program to and for the day program during the extension time which you can set in the plugin configuration afer which this button will be automaticall switched back to "Off". You can also use this switch during the "holiday" time to temperarily overrule the holiday program. 
-    - A "DHW controlled by program" switch: When this switch is on, this forces the boiler DHW function to be on during daytime program and switched off during night or frost protection program.
+    - A "heating / cooling" switch: This reports the mode of the boiler: Off, Heating or Cooling
 
-3. And then there some devices to let you control the boiler directly
-    - "Boiler Setpoint". When the program is Off, you can use this setpoint to manually set the boiler termpature
-    - "DHW Setpoint". If you have a SWH system, you can use this setpoint to manually set the water temperature
-    - "EnableCentralHeating". When the program is Off, you can use this switch to manually switch on or off the central heating
-    - "EnableCooling", if your system supports and the program is set to Off: You can use this switch to manually switch on or off cooling
-    - "EnableHotWater", if your system supports: You can use this switch to manually switch on or off the hotwater system
-
-4. And then there is information reported about the boiler (not all sensors are supported by every boiler): 
-    - "Central Heating": the reporting of opentherm if central heating is switched on
-    - "Cooling": the reporting of opentherm if cooling is switched on
-    - "HotWater": The reporting of opentherm if hotwater is switched on
-    - "Flame": is the Flame on or Off
-    - "Pressure": The pressure in the boiler
-    - "Modulation": The modulationlevel of the boiler
-    - "BoilerTemperature": The temperature of the boiler
-    - "ReturnTemperature": The temperature of the water returning to the boiler
-    - "DHWTemperature": The temperature of the hot water supply
-
-5. All things work as regular domoticz devices, so you can use the "regular" domoticz magic to
+3. All things work as regular domoticz devices, so you can use the "regular" domoticz magic to
     - add devices to your favorites or room definitions to create a GUI for the thermostast  
     - set timers on the "Program" to switch between day, night and frost protection programs  
     - set timers on the setpoints to get different levels of comfort during the day
-    - set timers on the "Enable DHW" switch if you would like to save gas by switching off  
-    - set alarms to alert you if if the waterpressure is dropping below a certain level and you want to refill before your boiler gets into an error state
     - make the buttons part of a scene to have the heating change as well in certain scenes
     - etc..etc... 
+    
+4. Bonus: In combination with the referenced ESP firmware you even have all devices to make a very nice thermostat device in homekit if you use the "Homebridge Domoticz Thermostat" plugin in homekit. Just look for this plugin in the hombebridge GUI. In this plugin you can configure the "Day setpoint" (what temperature you want the room to be), the "program" switch to set correct program and the "heating cooling" switch to make homekit show the correct state (and ofcourse add an internal temperature device to show your inside temperature in the homekit thermostat)  
 
 Have fun!
 

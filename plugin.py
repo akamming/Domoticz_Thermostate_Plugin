@@ -313,6 +313,7 @@ def GetDeviceValues():
             Debug("Not updateing HEating cooling state, already at level "+str(level))
         else:
             Devices[CURRENTHEATINGCOOLINGSTATE].Update(nValue=int(level), sValue=str(level), TypeName="Selector Switch", Options=Options)
+            Debug("HeatingCoolingState was updated to "+str(level))
 
     return ReturnValue
     
@@ -411,9 +412,9 @@ def GetSetpoint(SetpointDeviceIDX):
 def GetSwitchState(SwitchDeviceIDX):
     data = DomoticzAPI("type=devices&rid="+str(SwitchDeviceIDX))
     try:
-        CurrentSwitchState=False
-        if data["result"][0]["Status"]=="On":
-            CurrentSwitchState=True
+        CurrentSwitchState=True
+        if data["result"][0]["Status"]=="Off":
+            CurrentSwitchState=False
         Debug ("switch "+data["result"][0]["Name"]+" is set to "+data["result"][0]["Status"])
         return True,CurrentSwitchState
     except:

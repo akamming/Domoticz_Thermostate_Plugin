@@ -345,7 +345,6 @@ def CalculateBoilerSetPoint():
         Debug("Temp calculated at "+str(TargetTemperature))
 
         #Apply reference room compensation
-        Succes,CurrentInsideTemperature=GetTemperature(Parameters["Mode3"])
         Compensation=Devices[REFERENCEROOMCOMPENSATION].nValue
         if Compensation>0:
             Debug("applying reference room temperature compensation: "+str((CurrentSetpoint-CurrentInsideTemperature)*Compensation))
@@ -603,7 +602,7 @@ def HandleProgram():
                     
                     #Manage Heating
                     if CurrentInsideTemperature<=Devices[FROSTPROTECTIONSETPOINT].nValue:
-                        Debug("temperature below frostprotection setpoint, make sure there is heating")
+                        Debug("temperature "+str(CurrentInsideTemperature)+" below frostprotection setpoint "+str(Devices[FROSTPROTECTIONSETPOINT].nValue)+", make sure there is heating")
                         SetHeatingCoolingState(True,False,TargetTemperature)
                     else:
                         Debug("temperature above frost protection setpoint, switch off heating")
@@ -658,8 +657,6 @@ class BasePlugin:
         Debug("P set to "+str(KP))
         Debug("I set to "+str(KI))
         Debug("D set to "+str(KD))
-
-
 
         # Read config
         #for  x in Parameters:

@@ -552,7 +552,7 @@ def CheckSimulation():
         Log("File "+str(Parameters["HomeFolder"])+"SIM"+" exists, switched on Simulation mode (no commands sent to control actual heating/cooling")
     else:
         Debug("File "+str(Parameters["HomeFolder"])+"SIM"+" does not exist, switching off Simulation mode")
-        Debugging=False #True/False
+        Simulation=False #True/False
 
 def HandleProgram():
     if CurrentHotWaterActive:

@@ -3,7 +3,7 @@ Domoticz Plugin for ESP thermostat with weather dependent heating control, but c
 
 
 ## Warning for this version
-WARNING:  This version is part of a new 2.0 release which makes a clear split between the ESP and this plugin and therefor breaks compatibility with the previous one. Use  release  1.1 if you are using the old firmware:
+WARNING:  This version is part of a new 2.0 incompatible with the previous one.
 
 Main differences (documentation still needs to be adapted):
 - The ESP creates devices using autodiscovery feature (which can be used in both HA and Domoticz)
@@ -22,12 +22,10 @@ My current boiler is end of life and i needed a new one. My current thermostate 
 9. Easy switching between modulating thermostat or weather dependent mode
 
 ## Prerequisites
-1. A wemos D1 with domoticz opentherm handler firmware (https://github.com/akamming/esp_domoticz_opentherm_handler)
+1. A wemos D1 with domoticz opentherm handler firmware (https://github.com/akamming/esp_domoticz_opentherm_handler) with MQTT enabled
 2. Connected to an opentherm adapter (like http://ihormelnyk.com/opentherm_adapter)
 3. which is connected to an opentherm compatible Boiler
-4. A working domoticz installation with at least and make sure you know the IDX numbers of 
-    - a working temperature device for measuring the outside temperature
-    - a working temperature device for measuring the inside temperature in 1 room (the "reference room")
+4. A working domoticz installation with MQTT autodiscovery enabled (so it disovers the Wemos D1 with the openthermhandler firmware) 
 
 ## installation
 1. Make sure you have the correct devices in domoticz to handle you boiler. E.G. by using the ESP firmware on an ESP8266 together with an opentherm adatper: (https://github.com/akamming/esp_domoticz_opentherm_handler) in combination 

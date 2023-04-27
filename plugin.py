@@ -72,6 +72,7 @@ CURRENTHEATINGCOOLINGSTATE=26
 HOLIDAY=27
 THERMOSTATTEMPERATURE=29
 FPWD=35
+MINTEMPDIFF=36
 
 #Global vars
 Hostname=""
@@ -238,6 +239,7 @@ def CreateParameters():
     CreateSetPoint("Day Setpoint",SETPOINT,20)
     CreateSetPoint("Frost Protection Setpoint",FROSTPROTECTIONSETPOINT,7)
     CreateSetPoint("Reference Room Temperature Compensation",REFERENCEROOMCOMPENSATION,3)
+    CreateSetPoint("Minimum Temperature Difference",MINTEMPDIFF,3)
     CreateOnOffSwitch("Holiday",HOLIDAY)
     CreateOnOffSwitch("FirePlace/Weather Dependent Control",FPWD)
 
@@ -571,27 +573,29 @@ def HandleProgram():
                     Debug("Handling program")
 
                     if Devices[PROGRAMSWITCH].nValue==10: #HEATING
-                        if TargetTemperature>CurrentInsideTemperature: 
+                        if TargetTemperature>CurrentInsideTemperature+float(Devices[MINTEMPDIFF].sValue): 
                             Debug("HEATING: Setting boiler temp to "+str(TargetTemperature))
                             SetHeatingCoolingState(True,False,TargetTemperature)
-
                         else:
                             Debug("HEATING: Switching off heating ")
                             SetHeatingCoolingState(False,False,TargetTemperature)
                     elif Devices[PROGRAMSWITCH].nValue==20: #COOLING
-                        if TargetTemperature<CurrentInsideTemperature: 
+                        if TargetTemperature<CurrentInsideTemperature-float(Devices[MINTEMPDIFF].sValue): 
                             Debug("COOLING: Setting water temp to "+str(TargetTemperature))
                             SetHeatingCoolingState(False,True,TargetTemperature)
                         else:
                             Debug("COOLING: Switching off Cooling")
                             SetHeatingCoolingState(False,False,TargetTemperature)
                     elif Devices[PROGRAMSWITCH].nValue==30: #AUTO
-                        if TargetTemperature>CurrentInsideTemperature: 
+                        if TargetTemperature>CurrentInsideTemperature+float(Devices[MINTEMPDIFF].sValue): 
                             Debug("AUTO: HEATING: Setting boiler temp to "+str(TargetTemperature))
                             SetHeatingCoolingState(True,False,TargetTemperature)
-                        else:
+                        elif TargetTemperature<CurrentInsideTemperature-float(Devices[MINTEMPDIFF].sValue): 
                             Debug("AUTO: COOLING: Setting water temp to "+str(TargetTemperature))
                             SetHeatingCoolingState(False,True,TargetTemperature)
+                        else:
+                            Debug("AUTO: Switching off heating/cooling"+str(TargetTemperature))
+                            SetHeatingCoolingState(False,False,TargetTemperature)
                     else:
                         Debug("Weird: This code should not be reached, Programswitch set to "+str(Devices[PROGRAMSWITCH].nValue))
 

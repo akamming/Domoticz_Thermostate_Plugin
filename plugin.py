@@ -694,7 +694,7 @@ class BasePlugin:
 
         Debug("onCommand called for Unit " + str(Unit) + ": Parameter '" + str(Command) + "', Level: " + str(Level))
         if Unit in {CURVATURESWITCH,MINBOILERTEMP,MAXBOILERTEMP,BOILERTEMPATMIN10,BOILERTEMPATPLUS20,SWITCHHEATINGOFFAT,
-                SETPOINT,FROSTPROTECTIONSETPOINT,REFERENCEROOMCOMPENSATION}:
+                SETPOINT,FROSTPROTECTIONSETPOINT,REFERENCEROOMCOMPENSATION,MINTEMPDIFF}:
             if Devices[Unit].sValue=="" or float(Devices[Unit].sValue)!=float(Level):
                 Devices[Unit].Update(nValue=int(Level), sValue=str(Level))
         elif Unit==PROGRAMSWITCH:

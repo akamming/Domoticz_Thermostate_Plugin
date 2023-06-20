@@ -389,7 +389,7 @@ def DomoticzAPI(APICall):
     return resultJson
 
 def GetTemperature(TemperatureDeviceIDX):
-    data = DomoticzAPI("type=devices&rid="+str(TemperatureDeviceIDX))
+    data = DomoticzAPI("type=command&param=getdevices&rid="+str(TemperatureDeviceIDX))
     try:
         CurrentTemperature=data["result"][0]["Temp"]
         Debug ("Sensor "+data["result"][0]["Name"]+" has temperature "+str(CurrentTemperature))
@@ -400,7 +400,7 @@ def GetTemperature(TemperatureDeviceIDX):
         return False,0
 
 def GetSetpoint(SetpointDeviceIDX):
-    data = DomoticzAPI("type=devices&rid="+str(SetpointDeviceIDX))
+    data = DomoticzAPI("type=command&param=getdevices&rid="+str(SetpointDeviceIDX))
     try:
         CurrentSetpoint=float(data["result"][0]["Data"])
         Debug ("Sensor "+data["result"][0]["Name"]+" has temperature "+str(CurrentSetpoint))
@@ -411,7 +411,7 @@ def GetSetpoint(SetpointDeviceIDX):
         return False,0
 
 def GetSwitchState(SwitchDeviceIDX):
-    data = DomoticzAPI("type=devices&rid="+str(SwitchDeviceIDX))
+    data = DomoticzAPI("type=command&param=getdevices&rid="+str(SwitchDeviceIDX))
     try:
         CurrentSwitchState=True
         if data["result"][0]["Status"]=="Off":

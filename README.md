@@ -3,7 +3,9 @@ Domoticz Plugin for ESP thermostat with weather dependent heating control, but c
 
 
 ## Warning for this version
-WARNING: this version includes a breaking change in the API in domoticz build 15326 (June 2023). Use version 1.2 of this plugin if you are on a domoticz version below that
+This plugin is nog longer maintained: The functionality of the plugin is now moved to the firmware (https://github.com/akamming/esp_domoticz_opentherm_handler) which exposes the same devices to domoticz (but now also Home Assistant) as this plugin does, rendering this plugin obsolete.
+
+So if you still use this plugin: Please start using Climate Setpoint which is exposed by the custom firmware and you can stop using this plugin (and still enjoy the same functionality).
 
 ## Why this plugin
 My current boiler is end of life and i needed a new one. My current thermostate is already Weather Dependent, but cannot take advantage of the modulation features of a new boiler and i didn't like the limitations of all the commercial propositions of a smart weather dependent thermostate, so by creating one myself in domoticz I now have the following advantages:

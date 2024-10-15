@@ -3,7 +3,7 @@ Domoticz Plugin for ESP thermostat with weather dependent heating control, but c
 
 
 ## Warning for this version
-This plugin is nog longer maintained: The functionality of the plugin is now moved to the firmware (https://github.com/akamming/esp_domoticz_opentherm_handler) which exposes the same devices to domoticz (but now also Home Assistant) as this plugin does, rendering this plugin obsolete.
+This plugin is no longer maintained: The functionality of the plugin is now moved to the firmware (https://github.com/akamming/esp_domoticz_opentherm_handler) which exposes the same devices to domoticz (but now also Home Assistant) as this plugin does, rendering this plugin obsolete.
 
 So if you still use this plugin: Please start using Climate Setpoint which is exposed by the custom firmware and you can stop using this plugin (and still enjoy the same functionality).
 
